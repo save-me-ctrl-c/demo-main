@@ -1,0 +1,16 @@
+/* === AppLayout === */
+.app-root {
+  height: 100%; height: 100dvh; display: flex; flex-direction: column;
+  overflow: hidden; position: relative; background: var(--color-bg);
+}
+.app-main {
+  flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Ensure content can always scroll on short screens */
+  min-height: 0;
+}
+.app-main > div {
+  /* Each page wrapper should at minimum fill available space */
+  min-height: 100%;
+}
+

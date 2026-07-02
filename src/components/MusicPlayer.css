@@ -1,0 +1,101 @@
+.mini-player {
+  position: fixed; bottom: var(--tab-height); left: 0; right: 0;
+  height: clamp(54px, 8vh, 68px);
+  padding: 0;
+  background: var(--color-nowplaying-bar); color: var(--color-nowplaying-text);
+  display: flex; flex-direction: column; z-index: 99;
+  animation: playerSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transition: background 0.35s ease; box-sizing: border-box;
+}
+
+@keyframes playerSlideIn {
+  from { bottom: calc(var(--tab-height) - clamp(54px, 8vh, 68px)); opacity: 0; }
+  to { bottom: var(--tab-height); opacity: 1; }
+}
+
+@media (min-width: 768px) {
+  .mini-player {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: clamp(380px, 45vw, 460px); max-width: 100vw;
+  }
+}
+
+/* ── Progress track (top thin bar) ── */
+.mp-progress-track {
+  height: 2px; background: rgba(255,255,255,0.08); cursor: pointer; flex-shrink: 0;
+  position: relative;
+}
+.mp-progress-track:hover { height: 4px; margin-top: -1px; transition: height 0.15s ease; }
+.mp-progress-fill {
+  height: 100%; background: var(--color-accent);
+  border-radius: 0 1px 1px 0; transition: width 0.15s linear, background 0.35s ease;
+  position: relative;
+}
+
+/* ── Main row ── */
+.mp-row {
+  display: flex; align-items: center; gap: var(--sp-xs);
+  padding: 4px var(--sp-sm); flex: 1;
+  padding-left: max(var(--sp-sm), var(--safe-left));
+  padding-right: max(var(--sp-sm), var(--safe-right));
+  position: relative;
+}
+
+/* ── Cover ── */
+.mp-cover {
+  width: 36px; height: 36px; border-radius: var(--radius-sm); flex-shrink: 0;
+  overflow: hidden; cursor: pointer; background: none; border: none; padding: 0;
+}
+.mp-cover-img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.mp-cover-fallback {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+
+/* ── Info ── */
+.mp-info {
+  flex: 1; min-width: 0; cursor: pointer;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.mp-title {
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mp-artist-time {
+  display: flex; align-items: center; gap: var(--sp-xs);
+  font-size: var(--fs-xs);
+}
+.mp-artist { opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-time { opacity: 0.45; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* ── Controls ── */
+.mp-controls {
+  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+}
+.mp-ctrl-btn {
+  background: none; border: none; cursor: pointer;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  color: var(--color-nowplaying-text); opacity: 0.7;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  padding: 0;
+}
+.mp-ctrl-btn:hover, .mp-ctrl-btn:active { opacity: 1; }
+.mp-ctrl-btn:active { transform: scale(0.85); }
+.mp-ctrl-btn.active { opacity: 1; color: var(--color-accent); }
+.mp-play-btn {
+  width: 32px; height: 32px; opacity: 1;
+  background: var(--color-nowplaying-text); color: var(--color-nowplaying-bar);
+  border-radius: 50%;
+}
+.mp-play-btn:hover { opacity: 0.9; }
+
+/* ── Local badge ── */
+.mp-local-badge {
+  position: absolute; top: 2px; right: 6px;
+  background: var(--color-accent); color: #fff;
+  border-radius: 50%; width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.45rem;
+}

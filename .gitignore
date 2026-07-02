@@ -1,0 +1,7 @@
+node_modules/
+dist/
+server/afrogo.db
+server/afrogo.db-shm
+server/afrogo.db-wal
+.DS_Store
+*.log

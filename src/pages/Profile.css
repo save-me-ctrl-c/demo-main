@@ -1,0 +1,69 @@
+/* === Profile — Responsive === */
+.profile-page { padding-bottom: var(--sp-xl); }
+
+.pf-header { display: flex; align-items: center; gap: clamp(10px, 2.5vw, 16px); padding: var(--sp-xs) var(--sp-md); }
+.pf-avatar-wrap { position: relative; flex-shrink: 0; }
+.pf-avatar { font-size: clamp(2.2rem, 8vw, 3rem); display: block; }
+.pf-level-badge { position: absolute; bottom: 0; right: -4px; font-size: 0.7rem; }
+.pf-names { flex: 1; min-width: 0; }
+.pf-names h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-id { font-size: var(--fs-xs); color: var(--color-text-muted); }
+.pf-edit-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--color-text-secondary); padding: clamp(5px, 0.7vh, 8px) clamp(10px, 3vw, 16px);
+  border-radius: var(--radius-full); font-size: var(--fs-xs); cursor: pointer; min-height: auto;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;
+}
+
+.pf-bio { padding: var(--sp-xs) var(--sp-md) var(--sp-md); font-size: var(--fs-xs); color: var(--color-text-secondary); white-space: pre-line; line-height: 1.5; }
+
+.pf-stats {
+  display: flex; align-items: center; margin: 0 var(--sp-md);
+  background: var(--color-card); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); padding: clamp(10px, 1.5vh, 16px) 0;
+}
+.pf-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pfs-val { font-size: var(--fs-md); font-weight: 700; }
+.pfs-lbl { font-size: var(--fs-xs); color: var(--color-text-muted); }
+.pfs-sep { width: 1px; height: clamp(20px, 3vh, 28px); background: var(--color-divider); }
+
+.pf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-xs); padding: var(--sp-md); }
+.pf-card {
+  background: var(--color-card); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); padding: clamp(14px, 2vh, 20px);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.pfc-num { font-size: var(--fs-lg); font-weight: 700; }
+.pfc-lbl { font-size: var(--fs-xs); color: var(--color-text-secondary); }
+
+.device-card {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 var(--sp-md) var(--sp-md);
+  background: var(--color-card); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); padding: clamp(10px, 1.5vh, 16px); gap: var(--sp-sm);
+}
+.dev-info { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; }
+.dev-name { font-size: var(--fs-sm); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dev-status { font-size: var(--fs-xs); color: var(--color-text-muted); }
+.dev-status.on { color: #34C759; }
+.dev-model { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; }
+
+.pf-menu { padding: 0 var(--sp-md); }
+.pf-menu-item {
+  display: flex; align-items: center; gap: var(--sp-sm); width: 100%;
+  padding: clamp(12px, 1.5vh, 16px) 0;
+  background: none; border: none; border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text); cursor: pointer; font-size: var(--fs-sm); min-height: auto;
+  transition: background 0.15s ease;
+}
+.pf-menu-item:last-child { border-bottom: none; }
+.pf-menu-item:active:not(:has(button)) { background: var(--color-card-hover); }
+.pfm-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pfm-label.accent { color: var(--color-accent); font-weight: 600; }
+.pfm-badge { font-size: var(--fs-xs); padding: 3px 8px; border-radius: 10px; background: rgba(255,255,255,0.06); color: var(--color-text-muted); white-space: nowrap; }
+.pfm-badge.on { color: #34C759; }
+.pfm-badge.accent { background: var(--color-accent); color: #fff; font-weight: 700; }
+
+.pf-footer { padding: var(--sp-xl) var(--sp-md); display: flex; flex-direction: column; align-items: center; gap: var(--sp-sm); }
+.logout-btn { width: 100%; padding: clamp(12px, 1.5vh, 16px); background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #FF3B30; border-radius: var(--radius-full); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.pf-version { font-size: var(--fs-xs); color: var(--color-text-dim); }
