@@ -10,6 +10,7 @@ const zh = {
   tab_social: '社交', tab_create: '创作', tab_library: '曲库', tab_me: '我的',
 
   social_header: 'AfroGO', social_notif: '通知', social_follow: '关注',
+  social_watch_feed: '视频直播', social_feed_title: '为你推荐',
   leaderboard: '排行榜', near_you: '同城推荐',
 
   create_title: '创作中心', create_subtitle: '记录舞蹈，表达自我',
@@ -51,6 +52,7 @@ const en = {
   tab_social: 'Social', tab_create: 'Create', tab_library: 'Library', tab_me: 'Me',
 
   social_header: 'AfroGO', social_notif: 'Notifications', social_follow: 'Follow',
+  social_watch_feed: 'Videos & Live', social_feed_title: 'For You',
   leaderboard: 'Leaderboard', near_you: 'Near You',
 
   create_title: 'Create', create_subtitle: 'Capture your dance, express your style',

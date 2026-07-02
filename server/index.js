@@ -30,11 +30,20 @@ app.use('/media', express.static(mediaDir, {
   },
 }));
 
+const danceDir = path.join(mediaDir, 'dance');
+app.use('/media/dance', express.static(danceDir, { maxAge: '7d' }));
+
 // ── Helper: validate filename (prevent path traversal) ──
 function isValidFilename(name) {
   if (!name || typeof name !== 'string') return false;
   if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
   return /\.(mp3|wav|m4a|ogg|flac)$/i.test(name);
+}
+
+function isValidVideoFile(name) {
+  if (!name || typeof name !== 'string') return false;
+  if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
+  return /\.(mp4|webm|mov)$/i.test(name);
 }
 
 // ── Audio streaming with Range support (for seeking) ──
@@ -84,6 +93,31 @@ app.get('/api/stream/:filename', (req, res) => {
   }).catch(() => {
     res.status(404).json({ error: 'Audio file not found' });
   });
+});
+
+// ── Video streaming ──
+app.get('/api/stream-video/:filename', (req, res) => {
+  const filename = req.params.filename;
+  if (!isValidVideoFile(filename)) return res.status(400).json({ error: 'Invalid filename' });
+  const filePath = path.join(danceDir, filename);
+  fs.promises.stat(filePath).then(stat => {
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize) return res.status(416).json({ error: 'Range Not Satisfiable' });
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Content-Type': 'video/mp4',
+      });
+      fs.createReadStream(filePath, { start, end }).pipe(res);
+    } else {
+      res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' });
+      fs.createReadStream(filePath).pipe(res);
+    }
+  }).catch(() => res.status(404).json({ error: 'Video file not found' }));
 });
 
 // ── List local audio files ──

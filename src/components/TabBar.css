@@ -39,6 +39,16 @@
   font-weight: var(--fw-bold);
 }
 
+/* Spinning vinyl — library icon when playing */
+.tab-icon-spin {
+  animation: vinylSpin 3s linear infinite;
+  transform-origin: center center;
+}
+@keyframes vinylSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @media (min-width: 768px) {
   .tab-bar { left: 50%; right: auto; transform: translateX(-50%); width: clamp(360px, 45vw, 430px); max-width: 100vw; }
 }

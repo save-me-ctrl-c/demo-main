@@ -117,15 +117,15 @@ function seedIfEmpty() {
   const insertPS = db.prepare(`INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)`);
   songIds.forEach((sid, i) => insertPS.run(plId, sid, i + 1));
 
-  // ── VIDEOS ──
+  // ── VIDEOS (real dance clips + metadata) ──
+  const videos = [
+    { id: uuid(), uid: users[0].id, desc: 'Funky Lagos groove — can\'t stop moving! 🔥 #Afrobeat', song_title: 'Funky Lagos', song_artist: 'groucho_marxx', likes: 12800, comments: 842, shares: 3200, tips: 1200, color: '#FF6B35', dance: 'Afrobeat', region: 'Accra, Ghana', file: '1.mp4' },
+    { id: uuid(), uid: users[1].id, desc: 'Nadeya vibes — this beat is everything 🕺 #Afrobeat #Dance', song_title: 'Nadeya', song_artist: 'VJ_Memes', likes: 28400, comments: 1500, shares: 8100, tips: 3600, color: '#E84855', dance: 'Azonto', region: 'Lagos, Nigeria', file: '2.mp4' },
+    { id: uuid(), uid: users[2].id, desc: 'Take Some Time — House groove session 💃 #Amapiano #House', song_title: 'Take Some Time', song_artist: 'lazztunes07', likes: 89200, comments: 4800, shares: 22000, tips: 9100, color: '#B388FF', dance: 'Amapiano', region: 'Johannesburg, SA', file: '3.mp4' },
+    { id: uuid(), uid: users[0].id, desc: 'World Fusion — bringing cultures together 🌍 #Fusion #Dance', song_title: 'World Fusion Music', song_artist: 'texasradiofish', likes: 15300, comments: 920, shares: 5400, tips: 2100, color: '#FF8C3D', dance: 'Afro-Fusion', region: 'Accra, Ghana', file: '4.mp4' },
+  ];
   const insertVideo = db.prepare(`INSERT INTO videos (id, user_id, "desc", song_title, song_artist, likes, comments, shares, tips, color, dance_style, region, verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`);
-  [
-    [users[0].id, 'Funky Lagos groove — can\'t stop moving! 🔥 #Afrobeat', 'Funky Lagos', 'groucho_marxx', 12800, 842, 3200, 1200, '#FF6B35', 'Afrobeat', 'Accra, Ghana'],
-    [users[1].id, 'Nadeya vibes — this beat is everything 🕺 #Afrobeat', 'Nadeya', 'VJ_Memes', 28400, 1500, 8100, 3600, '#E84855', 'Azonto', 'Lagos, Nigeria'],
-    [users[2].id, 'Take Some Time — House groove session 💃 #Amapiano', 'Take Some Time', 'lazztunes07', 89200, 4800, 22000, 9100, '#B388FF', 'Amapiano', 'Johannesburg, SA'],
-    [users[0].id, 'World Fusion — bringing cultures together 🌍 #Fusion', 'World Fusion Music', 'texasradiofish', 15300, 920, 5400, 2100, '#FF8C3D', 'Afro-Fusion', 'Accra, Ghana'],
-    [users[1].id, 'Dance In The Rain — letting it all out 🌧️ #Dance', 'Dance In The Rain', 'zep_hurme', 45200, 2100, 15800, 5600, '#FF5C8A', 'Amapiano', 'Lagos, Nigeria'],
-  ].forEach(v => insertVideo.run(uuid(), ...v));
+  videos.forEach(v => insertVideo.run(v.id, v.uid, v.desc, v.song_title, v.song_artist, v.likes, v.comments, v.shares, v.tips, v.color, v.dance, v.region));
 
   // ── TOPICS ──
   const insertTopic = db.prepare(`INSERT INTO topics (id, name, posts_count) VALUES (?, ?, ?)`);

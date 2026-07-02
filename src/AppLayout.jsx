@@ -24,8 +24,10 @@ function AppLayout() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playQueue, setPlayQueue] = useState([])
   const [queueIndex, setQueueIndex] = useState(-1)
-  const [isShuffled, setIsShuffled] = useState(false)
-  const [isRepeat, setIsRepeat] = useState(false)
+  // playMode: 0=normal, 1=shuffle, 2=repeat-one
+  const [playMode, setPlayMode] = useState(0)
+  const isShuffled = playMode === 1
+  const isRepeat = playMode === 2
   const [progress, setProgress] = useState(0)
   const audioRef = useRef(null)
   const songRef = useRef(null)
@@ -89,14 +91,6 @@ function AppLayout() {
       audio.removeEventListener('ended', onEnded)
     }
   }, [getNextIndex])
-
-  // Auto-pause when leaving player pages
-  useEffect(() => {
-    if (!showPlayer && isPlaying) {
-      setIsPlaying(false)
-      audioRef.current?.pause()
-    }
-  }, [showPlayer, isPlaying])
 
   // ── Core: play audio directly in click handler (for browser autoplay policy) ──
   const loadAndPlay = useCallback((song) => {
@@ -178,8 +172,7 @@ function AppLayout() {
     }
   }, [progress, loadAndPlay])
 
-  const handleToggleShuffle = useCallback(() => setIsShuffled(s => !s), [])
-  const handleToggleRepeat = useCallback(() => setIsRepeat(r => !r), [])
+  const handleCycleMode = useCallback(() => setPlayMode(m => (m + 1) % 3), [])
 
   const handleSeek = useCallback((percent) => {
     const pct = Math.max(0, Math.min(100, percent))
@@ -198,7 +191,7 @@ function AppLayout() {
         <Outlet context={{
           handlePlaySong, currentSong, isPlaying, handleTogglePlay,
           handleNext, handlePrev, progress, currentTime, handleSeek,
-          isShuffled, isRepeat, handleToggleShuffle, handleToggleRepeat,
+          playMode, handleCycleMode,
           playQueue, queueIndex,
         }} />
       </main>
@@ -207,11 +200,10 @@ function AppLayout() {
           song={currentSong} isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
           onNext={handleNext} onPrev={handlePrev}
           progress={progress} currentTime={currentTime} onSeek={handleSeek}
-          isShuffled={isShuffled} isRepeat={isRepeat}
-          onToggleShuffle={handleToggleShuffle} onToggleRepeat={handleToggleRepeat}
+          playMode={playMode} onCycleMode={handleCycleMode}
         />
       )}
-      {showOverlay && <TabBar />}
+      {showOverlay && <TabBar isPlaying={isPlaying} />}
       {showOverlay && <VoiceButton />}
     </div>
   )

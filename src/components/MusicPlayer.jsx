@@ -2,10 +2,17 @@ import { useNavigate } from 'react-router-dom'
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Download } from './Icon'
 import './MusicPlayer.css'
 
+// mode: 0=sequential, 1=shuffle, 2=repeat-one
+const MODE_META = [
+  { Icon: Shuffle, title: 'Sequential' },
+  { Icon: Shuffle, title: 'Shuffle' },
+  { Icon: Repeat, title: 'Repeat One' },
+]
+
 function MusicPlayer({
   song, isPlaying, onTogglePlay,
   onNext, onPrev, progress, currentTime, onSeek,
-  isShuffled, isRepeat, onToggleShuffle, onToggleRepeat,
+  playMode = 0, onCycleMode,
 }) {
   const navigate = useNavigate()
   if (!song) return null
@@ -17,30 +24,27 @@ function MusicPlayer({
     onSeek?.(Math.max(0, Math.min(100, pct)))
   }
 
+  const { Icon: ModeIcon, title: modeTitle } = MODE_META[playMode] || MODE_META[0]
+
   return (
     <div className="mini-player">
-      {/* Cover art + progress track */}
       <div className="mp-progress-track" onClick={handleTrackClick}>
         <div className="mp-progress-fill" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Main row */}
       <div className="mp-row">
-        {/* Cover */}
-        <button
-          className="mp-cover"
-          onClick={(e) => { e.stopPropagation(); navigate(`/player/${song.id}`) }}
-        >
-          {song.coverUrl ? (
-            <img src={song.coverUrl} alt={song.title} className="mp-cover-img" />
-          ) : (
-            <span className="mp-cover-fallback" style={{ background: `linear-gradient(135deg, ${song.color || '#1EABBE'}, ${(song.color || '#1EABBE')}66)` }}>
-              🎵
-            </span>
-          )}
+        {/* Cover — fix: show image or fallback */}
+        <button className="mp-cover" onClick={(e) => { e.stopPropagation(); navigate(`/player/${song.id}`) }}>
+          {(song.coverUrl) ? (
+            <img src={song.coverUrl} alt={song.title} className="mp-cover-img"
+              onError={(e) => { e.target.style.display = 'none' }} />
+          ) : null}
+          <span className="mp-cover-fallback" style={{
+            background: `linear-gradient(135deg, ${song.color || '#8D8AD1'}, ${(song.color || '#8D8AD1')}66)`,
+            display: !song.coverUrl ? 'flex' : 'none',
+          }}>🎵</span>
         </button>
 
-        {/* Info */}
         <div className="mp-info" onClick={() => navigate(`/player/${song.id}`)}>
           <span className="mp-title">{song.title}</span>
           <span className="mp-artist-time">
@@ -49,14 +53,14 @@ function MusicPlayer({
           </span>
         </div>
 
-        {/* Controls */}
         <div className="mp-controls">
           <button
-            className={`mp-ctrl-btn ${isShuffled ? 'active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); onToggleShuffle?.() }}
-            title="Shuffle"
+            className={`mp-ctrl-btn ${playMode !== 0 ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onCycleMode?.() }}
+            title={modeTitle}
+            style={playMode === 0 ? { opacity: 0.45 } : {}}
           >
-            <Shuffle size={14} />
+            <ModeIcon size={14} />
           </button>
           <button className="mp-ctrl-btn" onClick={(e) => { e.stopPropagation(); onPrev?.() }} title="Previous">
             <SkipBack size={16} />
@@ -67,16 +71,8 @@ function MusicPlayer({
           <button className="mp-ctrl-btn" onClick={(e) => { e.stopPropagation(); onNext?.() }} title="Next">
             <SkipForward size={16} />
           </button>
-          <button
-            className={`mp-ctrl-btn ${isRepeat ? 'active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); onToggleRepeat?.() }}
-            title="Repeat"
-          >
-            <Repeat size={14} />
-          </button>
         </div>
 
-        {/* Local badge */}
         {song.type === 'offline' && (
           <span className="mp-local-badge" title="Local file">
             <Download size={8} />

@@ -77,13 +77,13 @@
 .mp-ctrl-btn {
   background: none; border: none; cursor: pointer;
   width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  color: var(--color-nowplaying-text); opacity: 0.7;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  color: var(--color-nowplaying-text); opacity: 0.65;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.2s ease;
   padding: 0;
 }
-.mp-ctrl-btn:hover, .mp-ctrl-btn:active { opacity: 1; }
+.mp-ctrl-btn:hover, .mp-ctrl-btn:active { opacity: 0.9; }
 .mp-ctrl-btn:active { transform: scale(0.85); }
-.mp-ctrl-btn.active { opacity: 1; color: var(--color-accent); }
+.mp-ctrl-btn.active { opacity: 1; color: #B5B3E6; }
 .mp-play-btn {
   width: 32px; height: 32px; opacity: 1;
   background: var(--color-nowplaying-text); color: var(--color-nowplaying-bar);

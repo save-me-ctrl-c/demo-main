@@ -13,7 +13,7 @@ function Player() {
   const {
     handlePlaySong, currentSong, isPlaying, handleTogglePlay,
     handleNext, handlePrev, progress, currentTime, handleSeek,
-    isShuffled, isRepeat, handleToggleShuffle, handleToggleRepeat,
+    playMode, handleCycleMode,
     playQueue,
   } = useOutletContext()
   const ctxRef = useRef({ handlePlaySong, playQueue })
@@ -127,8 +127,11 @@ function Player() {
       </div>
 
       <div className="plr-controls">
-        <button className={`ctrl-btn ${isShuffled ? 'ctrl-active' : ''}`} onClick={handleToggleShuffle}>
-          <Shuffle size={18} className={isShuffled ? 'icon-accent' : 'icon-secondary'} />
+        <button className={`ctrl-btn ${playMode !== 0 ? 'ctrl-active' : ''}`} onClick={handleCycleMode}
+          style={playMode === 0 ? { opacity: 0.4 } : {}}>
+          {playMode === 2
+            ? <Repeat size={18} className="icon-accent" />
+            : <Shuffle size={18} className={playMode === 1 ? 'icon-accent' : 'icon-secondary'} />}
         </button>
         <button className="ctrl-btn" onClick={handlePrev}>
           <SkipBack size={20} />
@@ -138,9 +141,6 @@ function Player() {
         </button>
         <button className="ctrl-btn" onClick={handleNext}>
           <SkipForward size={20} />
-        </button>
-        <button className={`ctrl-btn ${isRepeat ? 'ctrl-active' : ''}`} onClick={handleToggleRepeat}>
-          <Repeat size={18} className={isRepeat ? 'icon-accent' : 'icon-secondary'} />
         </button>
       </div>
     </div>

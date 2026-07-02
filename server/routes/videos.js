@@ -81,6 +81,7 @@ function formatVideo(v) {
     region: v.region,
     verified: !!v.verified,
     createdAt: v.created_at,
+    videoUrl: null, // filled by frontend based on index
     user: {
       name: v.user_name,
       avatar: v.user_avatar,
