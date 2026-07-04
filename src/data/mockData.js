@@ -97,12 +97,10 @@ export const rankings = [
 // Tab2: Creation Center — Tools & Templates
 // ========================
 export const aiTools = [
-  { icon: '✨', label: 'AI Beautify' },
-  { icon: '🖼️', label: 'Background' },
-  { icon: '🎨', label: 'Filters' },
-  { icon: '✂️', label: 'Trim' },
-  { icon: '📝', label: 'Subtitles' },
-  { icon: '⏱️', label: 'Speed' },
+  { icon: '✨', label: 'AI Beautify', key: 'tool_ai_beautify' },
+  { icon: '🖼️', label: 'Smart Cutout', key: 'tool_cutout' },
+  { icon: '🔧', label: 'Quality Fix', key: 'tool_quality' },
+  { icon: '🎨', label: 'Smart Palette', key: 'tool_palette' },
 ]
 
 export const templates = [

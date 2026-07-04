@@ -3,17 +3,16 @@
 
 import {
   // Navigation
-  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin,
+  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X,
   // Media
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, Volume2,
   // Social
   MessageCircle, Share2, Gift, ThumbsUp, Plus, Send,
   // Tools
-  Camera, Upload, Sparkles, Scissors, Palette, Type, Gauge,
-  // Library
+  Camera, Upload, Sparkles, Scissors, Palette, Type, Gauge,   // Library
   Download, BookOpen, Crown, Music, FolderOpen, Clock, ListMusic,
   // Profile
-  Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe,
+  Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe, CreditCard, Shield, Info,
   // Voice
   Mic, MicOff,
 } from 'lucide-react'
@@ -53,11 +52,11 @@ export const Icon = {
 
 /* Re-export individual icons for direct import */
 export {
-  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin,
+  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X,
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart,
   MessageCircle, Share2, Gift, ThumbsUp, Plus, Send,
   Camera, Upload, Sparkles, Scissors, Palette, Type, Gauge,
   Download, BookOpen, Crown, Music, FolderOpen, Clock, ListMusic,
-  Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe,
+  Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe, CreditCard, Shield, Info,
   Mic, MicOff,
 }

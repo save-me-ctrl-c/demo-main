@@ -67,3 +67,47 @@
 .pf-footer { padding: var(--sp-xl) var(--sp-md); display: flex; flex-direction: column; align-items: center; gap: var(--sp-sm); }
 .logout-btn { width: 100%; padding: clamp(12px, 1.5vh, 16px); background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #FF3B30; border-radius: var(--radius-full); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
 .pf-version { font-size: var(--fs-xs); color: var(--color-text-dim); }
+
+/* === Sub-page Sheet Content === */
+.sub-body { padding: var(--sp-md); overflow-y: auto; }
+.sub-hero {
+  border-radius: var(--radius-lg); padding: 24px 20px; text-align: center; margin-bottom: var(--sp-md);
+  color: #fff;
+}
+.sub-hero-title { display: block; font-size: var(--fs-2xl); font-weight: 800; margin-top: 8px; }
+.sub-hero-val { display: block; font-size: 2rem; font-weight: 800; margin-top: 8px; }
+.sub-hero p { font-size: var(--fs-xs); opacity: 0.8; margin-top: 8px; }
+.sub-list { margin-bottom: var(--sp-md); }
+.sub-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider); font-size: var(--fs-sm);
+}
+.sub-item:last-child { border-bottom: none; }
+.sub-item-title { font-size: var(--fs-sm); font-weight: 500; display: block; }
+.sub-item-time { font-size: var(--fs-xs); color: var(--color-text-muted); display: block; margin-top: 2px; }
+.sub-badge { background: #EF4444; color: #fff; font-size: 0.55rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.sub-badge.hot { background: #EF4444; }
+.sub-btn {
+  width: 100%; padding: 14px; border: none; border-radius: var(--radius-full);
+  font-size: var(--fs-sm); font-weight: 700; cursor: pointer; color: #fff;
+  background: var(--color-accent);
+}
+.sub-btn.secondary { background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+.sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-sm); margin-bottom: var(--sp-md); }
+.sub-gcard {
+  background: var(--color-card); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); padding: 14px 8px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.sub-gcard span:first-child { font-size: 1.3rem; }
+.sgc-val { font-size: var(--fs-sm); font-weight: 700; }
+.sgc-lbl { font-size: 0.58rem; color: var(--color-text-muted); }
+.sub-val { font-size: var(--fs-xs); color: var(--color-text-muted); margin-left: auto; }
+.sub-chip { background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-secondary); padding: 5px 10px; border-radius: var(--radius-full); font-size: 0.65rem; cursor: pointer; min-height: auto; margin-left: auto; }
+.sub-device-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px;
+  background: var(--color-card); border-radius: var(--radius-md);
+  margin-bottom: var(--sp-md); border: 1px solid var(--color-divider);
+}
+.sd-name { font-size: var(--fs-sm); font-weight: 600; display: block; }
+.sd-status { font-size: var(--fs-xs); color: #34C759; display: block; margin-top: 2px; }
