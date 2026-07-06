@@ -65,6 +65,7 @@ const zh = {
 
   player_minimize: '收起', player_from_library: '来自曲库',
   voice_listening: '正在聆听...', voice_hint: '试试："播放Amapiano" · "教我Azonto"',
+  voice_recommend: '为您推荐',
   language: '语言', lang_switch: 'English',
 }
 
@@ -133,6 +134,7 @@ const en = {
 
   player_minimize: 'Minimize', player_from_library: 'Playing from Library',
   voice_listening: 'Listening...', voice_hint: 'Try: "Play Amapiano" · "Teach me Azonto"',
+  voice_recommend: 'Recommended for you',
   language: 'Language', lang_switch: '中文',
 }
 

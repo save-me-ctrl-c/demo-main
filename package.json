@@ -11,14 +11,18 @@
     "tunnel": "bash tunnel.sh"
   },
   "dependencies": {
+    "@runanywhere/web": "^0.1.0-beta.10",
+    "@runanywhere/web-onnx": "^0.19.13",
     "better-sqlite3": "^12.11.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "fuse.js": "^7.4.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",
+    "sherpa-onnx": "^1.13.3",
     "uuid": "^14.0.1"
   },
   "devDependencies": {

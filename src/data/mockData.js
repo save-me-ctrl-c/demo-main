@@ -134,11 +134,33 @@ export const playlists = [
 ]
 
 export const songs = [
-  { id: 's1', title: 'Essence', artist: 'Wizkid ft. Tems', duration: '4:08', genre: 'Afrobeat', dance: 'Azonto', color: '#1EABBE' },
-  { id: 's2', title: 'Water', artist: 'Tyla', duration: '3:20', genre: 'Amapiano', dance: 'Amapiano', color: '#40C4D8' },
-  { id: 's3', title: 'Calm Down', artist: 'Rema', duration: '3:40', genre: 'Afrobeat', dance: 'Afro-Fusion', color: '#158A9C' },
-  { id: 's4', title: 'Unavailable', artist: 'Davido ft. Musa Keys', duration: '2:55', genre: 'Afrobeat', dance: 'Afrobeat', color: '#B388FF' },
-  { id: 's5', title: 'Rush', artist: 'Ayra Starr', duration: '3:05', genre: 'Afro-Pop', dance: 'Contemporary', color: '#FF8C3D' },
+  { id: 's1', title: 'Funky Lagos', artist: 'AfroGroove Collective', duration: '3:42', genre: 'Afrobeat', dance: 'Azonto',
+    color: '#1EABBE', file: '/api/stream/Funky_Lagos.mp3',
+    aliases: ['Funky Lagos', 'Lagos', 'funky', 'AfroGroove'] },
+  { id: 's2', title: 'Nadeya', artist: 'Sona Jobarteh', duration: '4:15', genre: 'Afro-Fusion', dance: 'Kizomba',
+    color: '#B388FF', file: '/api/stream/Nadeya.mp3',
+    aliases: ['Nadeya', 'Sona', 'Jobarteh'] },
+  { id: 's3', title: 'Take Some Time', artist: 'The Cooltrane Quartet', duration: '5:28', genre: 'Jazz', dance: 'Slow Dance',
+    color: '#FF8C3D', file: '/api/stream/Take_Some_Time.mp3',
+    aliases: ['Take Some Time', 'Cooltrane', 'take time'] },
+  { id: 's4', title: 'Dance In The Rain', artist: 'JP Cooper', duration: '3:10', genre: 'Afro-Pop', dance: 'Contemporary',
+    color: '#40C4D8', file: '/api/stream/Dance_In_The_Rain.mp3',
+    aliases: ['Dance In The Rain', 'dance rain', 'JP Cooper', 'Cooper'] },
+  { id: 's5', title: 'For You I\'ll Go There', artist: 'The Smooth Jazz Allstars', duration: '4:02', genre: 'Jazz', dance: 'Slow Dance',
+    color: '#158A9C', file: '/api/stream/For_You_I_ll_Go_There.mp3',
+    aliases: ['For You', 'go there', 'Smooth Jazz', 'Allstars'] },
+  { id: 's6', title: 'Bootlickers House Remix', artist: 'The Bootlickers', duration: '3:22', genre: 'House', dance: 'Amapiano',
+    color: '#00E676', file: '/api/stream/Bootlickers_House_Remix.mp3',
+    aliases: ['Bootlickers', 'house remix', 'bootlicker', 'house'] },
+  { id: 's7', title: 'Gas and Gravity', artist: 'The Crystal Method', duration: '4:48', genre: 'Electronic', dance: 'Freestyle',
+    color: '#448AFF', file: '/api/stream/Gas_and_Gravity.mp3',
+    aliases: ['Gas and Gravity', 'gas gravity', 'Crystal Method', 'crystal'] },
+  { id: 's8', title: 'Around the Corner', artist: 'The Smooth Jazz Allstars', duration: '3:35', genre: 'Jazz', dance: 'Slow Dance',
+    color: '#FFB703', file: '/api/stream/Around_The_Corner.mp3',
+    aliases: ['Around the Corner', 'around corner', 'Smooth Jazz', 'corner'] },
+  { id: 's9', title: 'World Fusion Music', artist: 'Global Beats Ensemble', duration: '4:55', genre: 'World', dance: 'Highlife',
+    color: '#FF5C8A', file: '/api/stream/World_Fusion_Music.mp3',
+    aliases: ['World Fusion', 'world music', 'fusion', 'Global Beats', 'global'] },
 ]
 
 // ========================

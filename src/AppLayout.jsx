@@ -4,6 +4,9 @@ import { getToken } from './api'
 import TabBar from './components/TabBar'
 import MusicPlayer from './components/MusicPlayer'
 import VoiceButton from './components/VoiceButton'
+import useWakeWord from './hooks/useWakeWord'
+import { parseIntent, findSongs, getFeedback, speak } from './services/voiceAssistant'
+import { songs } from './data/mockData'
 import './AppLayout.css'
 
 const FULLSCREEN_ROUTES = ['/player']
@@ -36,6 +39,14 @@ function AppLayout() {
   const isFullscreen = FULLSCREEN_ROUTES.some(r => location.pathname.startsWith(r))
   const showOverlay = !isFullscreen
   const showPlayer = PLAYER_ROUTES.some(r => location.pathname.startsWith(r))
+
+  // Pause music when entering fullscreen player
+  useEffect(() => {
+    if (isFullscreen && audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
+  }, [isFullscreen])
 
   const currentTime = useMemo(() => {
     if (!currentSong) return '0:00'
@@ -74,8 +85,9 @@ function AppLayout() {
         // Play next song — schedule after React render via setTimeout + ref
         setTimeout(() => {
           const s = playQueue[next]
-          if (s?.fileUrl && audioRef.current) {
-            audioRef.current.src = s.fileUrl
+          const url = getSongUrl(s)
+          if (url && audioRef.current) {
+            audioRef.current.src = url
             audioRef.current.play().catch(() => {})
           }
         }, 50)
@@ -92,14 +104,13 @@ function AppLayout() {
     }
   }, [getNextIndex])
 
-  // ── Core: play audio directly in click handler (for browser autoplay policy) ──
+  // ── Core: play audio — supports both file and fileUrl fields ──
+  const getSongUrl = (s) => s?.file || s?.fileUrl || ''
   const loadAndPlay = useCallback((song) => {
     const audio = audioRef.current
-    if (!audio || !song?.fileUrl) return false
-    if (audio.src !== song.fileUrl) {
-      audio.src = song.fileUrl
-      audio.load()
-    }
+    const url = getSongUrl(song)
+    if (!audio || !url) return false
+    if (audio.src !== url) { audio.src = url; audio.load() }
     audio.play().catch(e => { console.warn('Play blocked:', e.message); setIsPlaying(false) })
     return true
   }, [])
@@ -122,9 +133,10 @@ function AppLayout() {
     const audio = audioRef.current
     setIsPlaying(prev => {
       const next = !prev
-      if (next && songRef.current?.fileUrl) {
-        if (audio.src !== songRef.current.fileUrl) {
-          audio.src = songRef.current.fileUrl
+      const url = getSongUrl(songRef.current)
+      if (next && url) {
+        if (audio.src !== url) {
+          audio.src = url
           audio.load()
         }
         audio.play().catch(() => {})
@@ -182,6 +194,72 @@ function AppLayout() {
     }
   }, [])
 
+  // Wake word detection
+  const [wakeTrigger, setWakeTrigger] = useState(0)
+  const [wakeRecommend, setWakeRecommend] = useState(null)
+  useWakeWord({
+    onWake: useCallback(() => {
+      const shuffled = [...songs].sort(() => Math.random() - 0.5)
+      const randomSong = shuffled[0]
+      setWakeRecommend(randomSong.title)
+      setWakeTrigger(c => c + 1)
+      handlePlaySong(randomSong, shuffled)
+    }, [handlePlaySong]),
+    enabled: showOverlay,
+  })
+
+  // Voice command handler
+  const handleVoiceCommand = useCallback((raw) => {
+    if (!raw || raw.length < 2) return // ignore empty/short
+    const intent = parseIntent(raw)
+    console.log('[VoiceCmd]', intent)
+
+    switch (intent.action) {
+      case 'play': {
+        const results = findSongs(intent.params.query)
+        if (results.length > 0) {
+          handlePlaySong(results[0], results)
+          speak(getFeedback('play', results[0], 'zh'))
+        } else {
+          const randomSongs = findSongs('')
+          handlePlaySong(randomSongs[0], randomSongs)
+          speak(getFeedback('notFound', null, 'zh'))
+        }
+        break
+      }
+      case 'pause':
+        if (isPlaying) handleTogglePlay()
+        speak(getFeedback('pause', null, 'zh'))
+        break
+      case 'resume':
+        if (!isPlaying) handleTogglePlay()
+        speak(getFeedback('resume', null, 'zh'))
+        break
+      case 'next':
+        handleNext()
+        speak(getFeedback('next', null, 'zh'))
+        break
+      case 'prev':
+        handlePrev()
+        break
+      case 'random': {
+        const shuffled = findSongs('')
+        handlePlaySong(shuffled[0], shuffled)
+        speak(getFeedback('random', null, 'zh'))
+        break
+      }
+      case 'whatPlaying':
+        if (currentSong) speak(`Playing ${currentSong.title} by ${currentSong.artist}`)
+        break
+      case 'stop':
+        speak(getFeedback('stop', null, 'zh'))
+        // VoiceButton deactivation is handled internally via onDeactivate callback
+        break
+    }
+  }, [handlePlaySong, handleTogglePlay, handleNext, handlePrev, isPlaying, currentSong])
+
+  const [voiceActive, setVoiceActive] = useState(false)
+
   const bottomPadding = showOverlay ? (showPlayer && currentSong ? 120 : 64) : 0
 
   return (
@@ -204,7 +282,7 @@ function AppLayout() {
         />
       )}
       {showOverlay && <TabBar isPlaying={isPlaying} />}
-      {showOverlay && <VoiceButton />}
+      {showOverlay && <VoiceButton wakeTrigger={wakeTrigger} wakeRecommend={wakeRecommend} onCommand={handleVoiceCommand} />}
     </div>
   )
 }

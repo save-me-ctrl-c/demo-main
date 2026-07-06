@@ -27,6 +27,7 @@
 }
 
 .vp-text { font-size: var(--fs-xs); font-weight: 600; color: var(--color-accent-light); margin-bottom: 4px; }
+.vp-result { font-size: var(--fs-sm); color: #fff; margin-bottom: 4px; font-weight: 600; }
 .vp-hint { font-size: var(--fs-xs); color: rgba(255,255,255,0.6); line-height: 1.4; }
 
 @media (min-width: 768px) {

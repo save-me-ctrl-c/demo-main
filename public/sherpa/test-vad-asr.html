@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Sherpa VAD+ASR Test</title>
+  <style>
+    body { font-family: sans-serif; background:#1a1a2e; color:#eee; padding:20px; margin:0; }
+    #status { padding:12px; border-radius:8px; margin-bottom:12px; background:#16213e; font-size:14px; }
+    #result { padding:16px; border-radius:8px; background:#0f3460; min-height:60px; font-size:18px; white-space:pre-wrap; }
+    button { padding:12px 28px; border:none; border-radius:20px; cursor:pointer; font-size:16px; margin:4px; }
+    .start { background:#e94560; color:#fff; }
+    .stop { background:#533483; color:#fff; }
+    .hint { color:#888; font-size:13px; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <h2>Sherpa VAD+ASR Test (Moonshine)</h2>
+  <div id="status">Loading...</div>
+  <div id="result">等待识别...</div>
+  <div style="margin-top:12px">
+    <button id="startBtn" class="start" disabled>Start</button>
+    <button id="stopBtn" class="stop" disabled>Stop</button>
+  </div>
+  <div class="hint">点击 Start，对麦克风说话</div>
+
+  <script src="sherpa-onnx-vad.js"></script>
+  <script src="sherpa-onnx-asr.js"></script>
+  <script src="app-vad-asr.js"></script>
+  <script src="sherpa-onnx-wasm-main-vad-asr.js"></script>
+
+  <script>
+    const resultEl = document.getElementById('result')
+    const startBtn = document.getElementById('startBtn')
+    const stopBtn = document.getElementById('stopBtn')
+
+    let audioCtx, processor, results = []
+
+    function log(msg) { results.push(msg); resultEl.textContent = results.slice(-8).join('\n') }
+
+    // After app-vad-asr.js init, vad and recognizer are local. Wrap onRuntimeInitialized.
+    const origInit = window.Module.onRuntimeInitialized
+    window.Module.onRuntimeInitialized = () => {
+      origInit?.()
+      startBtn.disabled = false
+      document.getElementById('status').textContent = 'Ready. Click Start.'
+      log('✅ WASM initialized')
+    }
+
+    startBtn.onclick = async () => {
+      // Re-create VAD + ASR (app-vad-asr.js already created them, but they're local)
+      const M = window.Module
+      const vad = window.createVad(M)
+      const asrCfg = { modelConfig: { debug: 0 }, sampleRate: 16000, numThreads: 1, provider: 'cpu' }
+      const recognizer = new window.OfflineRecognizer(asrCfg, M)
+      log('✅ VAD + ASR ready')
+
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioCtx = new AudioContext({ sampleRate: 16000 })
+      const source = audioCtx.createMediaStreamSource(s)
+      const cap = 30 * 16000
+      const buffer = {
+        handle: M._SherpaOnnxCreateCircularBuffer(cap), M,
+        push(s) { const p=this.M._malloc(s.length*4);this.M.HEAPF32.set(s,p/4);this.M._SherpaOnnxCircularBufferPush(this.handle,p,s.length);this.M._free(p) },
+        get(start,n){ const p=this.M._SherpaOnnxCircularBufferGet(this.handle,start,n);const o=new Float32Array(n);for(let i=0;i<n;i++)o[i]=this.M.HEAPF32[p/4+i];this.M._SherpaOnnxCircularBufferFree(p);return o },
+        pop(n){this.M._SherpaOnnxCircularBufferPop(this.handle,n)},
+        size(){return this.M._SherpaOnnxCircularBufferSize(this.handle)},
+        head(){return this.M._SherpaOnnxCircularBufferHead(this.handle)},
+        reset(){this.M._SherpaOnnxCircularBufferReset(this.handle)},
+      }
+      processor = audioCtx.createScriptProcessor(4096, 1, 1)
+      let active = false
+      processor.onaudioprocess = (e) => {
+        const s = new Float32Array(e.inputBuffer.getChannelData(0)); buffer.push(s)
+        while (buffer.size() > vad.config.sileroVad.windowSize) {
+          const c = buffer.get(buffer.head(), vad.config.sileroVad.windowSize); vad.acceptWaveform(c); buffer.pop(vad.config.sileroVad.windowSize)
+          if (vad.isDetected() && !active) { active = true; log('🔊 Speech') }
+          if (!vad.isDetected() && active) { active = false }
+          while (!vad.isEmpty()) {
+            const seg = vad.front(); vad.pop()
+            if (seg.samples.length < 8000) continue
+            const st = recognizer.createStream()
+            st.acceptWaveform(16000, seg.samples)
+            recognizer.decode(st)
+            const r = recognizer.getResult(st)
+            st.free?.()
+            log('📝 ' + (r?.text || '(empty)'))
+          }
+        }
+      }
+      source.connect(processor); processor.connect(audioCtx.destination)
+      log('🎤 Recording...')
+      startBtn.disabled = true; stopBtn.disabled = false
+    }
+
+    stopBtn.onclick = () => {
+      processor?.disconnect()
+      audioCtx?.close()
+      log('⏹ Stopped')
+      startBtn.disabled = false; stopBtn.disabled = true
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { videos as videosApi } from '../api'
 import { videos as fallbackVideos, topics as fallbackTopics, rankings as fallbackRankings } from '../data/mockData'
 import { useT } from '../i18n/LanguageContext'
@@ -11,6 +12,7 @@ const DANCE_FILES = ['1.mp4', '2.mp4', '3.mp4', '4.mp4']
 
 function Social() {
   const { t } = useT()
+  const { isPlaying, handleTogglePlay } = useOutletContext()
   const { themeKey, toggleTheme } = useTheme()
   const [videos, setVideos] = useState(fallbackVideos)
   const [topics, setTopics] = useState(fallbackTopics)
@@ -92,7 +94,7 @@ function Social() {
         {topics.map((tp, i) => <button key={i} className="topic-chip">{tp.name}</button>)}
       </div>
 
-      <div className="feed-card" onClick={() => enterFeed(0)} style={{ '--accent': heroVideo?.color, cursor: 'pointer' }}>
+      <div className="feed-card" onClick={() => { if (isPlaying) handleTogglePlay(); enterFeed(0) }} style={{ '--accent': heroVideo?.color, cursor: 'pointer' }}>
         <div className="feed-thumb"><span className="feed-play-icon">▶</span></div>
         <div className="feed-info">
           <div className="feed-user-row">
