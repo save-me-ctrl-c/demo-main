@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { LanguageProvider, useT } from './i18n/LanguageContext'
 import { ThemeProvider } from './i18n/ThemeContext'
+import { AuthProvider } from './contexts/AuthContext'
+import { RequireAuth, RedirectIfAuth } from './components/AuthGuard'
 import AppLayout from './AppLayout'
 
 // Auth pages — lazy loaded (only seen once)
@@ -27,22 +29,28 @@ function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/welcome" element={<Welcome />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Social />} />
-                <Route path="/create" element={<Create />} />
-                <Route path="/library" element={<Library />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/player/:id" element={<Player />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Welcome — redirect to / if already logged in (skip if onboarding pending) */}
+                <Route path="/welcome" element={<RedirectIfAuth><Welcome /></RedirectIfAuth>} />
+                {/* Onboarding — accessible after login, not auto-redirected */}
+                <Route path="/onboarding" element={<Onboarding />} />
+
+                {/* Protected routes — redirect to /welcome if not logged in */}
+                <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
+                  <Route path="/" element={<Social />} />
+                  <Route path="/create" element={<Create />} />
+                  <Route path="/library" element={<Library />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/player/:id" element={<Player />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
   )

@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { getDb } = require('../db');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 
 const router = Router();
 
@@ -21,7 +21,8 @@ router.get('/', optionalAuth, (req, res) => {
 
   const total = db.prepare('SELECT COUNT(*) as count FROM videos').get().count;
 
-  const formatted = videos.map(v => formatVideo(v));
+  const likedIds = getLikedVideoIds(db, req.userId, videos.map(v => v.id));
+  const formatted = videos.map(v => formatVideo(v, likedIds.has(v.id)));
   res.json({ videos: formatted, total, page, limit });
 });
 
@@ -50,22 +51,41 @@ router.get('/:id', optionalAuth, (req, res) => {
   `).get(req.params.id);
 
   if (!v) return res.status(404).json({ error: 'Video not found' });
-  res.json({ video: formatVideo(v) });
+  const liked = req.userId ? !!db.prepare('SELECT 1 FROM user_likes WHERE user_id = ? AND video_id = ?').get(req.userId, v.id) : false;
+  res.json({ video: formatVideo(v, liked) });
 });
 
 // POST /api/videos/:id/like — toggle like
-router.post('/:id/like', optionalAuth, (req, res) => {
+router.post('/:id/like', requireAuth, (req, res) => {
   const db = getDb();
   const video = db.prepare('SELECT * FROM videos WHERE id = ?').get(req.params.id);
   if (!video) return res.status(404).json({ error: 'Video not found' });
 
-  // Increment likes count
-  db.prepare('UPDATE videos SET likes = likes + 1 WHERE id = ?').run(req.params.id);
+  const toggleLike = db.transaction(() => {
+    const existing = db.prepare('SELECT 1 FROM user_likes WHERE user_id = ? AND video_id = ?').get(req.userId, req.params.id);
+    if (existing) {
+      db.prepare('DELETE FROM user_likes WHERE user_id = ? AND video_id = ?').run(req.userId, req.params.id);
+      db.prepare('UPDATE videos SET likes = MAX(likes - 1, 0) WHERE id = ?').run(req.params.id);
+      return false;
+    }
+    db.prepare('INSERT INTO user_likes (user_id, video_id) VALUES (?, ?)').run(req.userId, req.params.id);
+    db.prepare('UPDATE videos SET likes = likes + 1 WHERE id = ?').run(req.params.id);
+    return true;
+  });
+
+  const liked = toggleLike();
   const updated = db.prepare('SELECT likes FROM videos WHERE id = ?').get(req.params.id);
-  res.json({ likes: updated.likes });
+  res.json({ likes: updated.likes, liked });
 });
 
-function formatVideo(v) {
+function getLikedVideoIds(db, userId, videoIds) {
+  if (!userId || videoIds.length === 0) return new Set();
+  const placeholders = videoIds.map(() => '?').join(',');
+  const rows = db.prepare(`SELECT video_id FROM user_likes WHERE user_id = ? AND video_id IN (${placeholders})`).all(userId, ...videoIds);
+  return new Set(rows.map(r => r.video_id));
+}
+
+function formatVideo(v, liked = false) {
   return {
     id: v.id,
     userId: v.user_id,
@@ -81,6 +101,7 @@ function formatVideo(v) {
     region: v.region,
     verified: !!v.verified,
     createdAt: v.created_at,
+    liked,
     videoUrl: null, // filled by frontend based on index
     user: {
       name: v.user_name,

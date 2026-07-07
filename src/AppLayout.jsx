@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { getToken } from './api'
+import { Outlet, useLocation } from 'react-router-dom'
 import TabBar from './components/TabBar'
 import MusicPlayer from './components/MusicPlayer'
 import VoiceButton from './components/VoiceButton'
 import useWakeWord from './hooks/useWakeWord'
 import { parseIntent, findSongs, getFeedback, speak } from './services/voiceAssistant'
+import { useT } from './i18n/LanguageContext'
 import { songs } from './data/mockData'
 import './AppLayout.css'
 
@@ -14,15 +14,7 @@ const PLAYER_ROUTES = ['/library', '/player']
 
 function AppLayout() {
   const location = useLocation()
-  const navigate = useNavigate()
 
-  // First-time check: redirect to welcome if no token
-  useEffect(() => {
-    const token = getToken()
-    if (!token) {
-      navigate('/welcome', { replace: true })
-    }
-  }, [navigate])
   const [currentSong, setCurrentSong] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playQueue, setPlayQueue] = useState([])
@@ -194,6 +186,9 @@ function AppLayout() {
     }
   }, [])
 
+  // i18n
+  const { lang } = useT()
+
   // Wake word detection
   const [wakeTrigger, setWakeTrigger] = useState(0)
   const [wakeRecommend, setWakeRecommend] = useState(null)
@@ -205,39 +200,68 @@ function AppLayout() {
       setWakeTrigger(c => c + 1)
       handlePlaySong(randomSong, shuffled)
     }, [handlePlaySong]),
-    enabled: showOverlay,
+    // Direct song name detection — play the song immediately
+    onSongDetected: useCallback((titleHint) => {
+      const results = findSongs(titleHint, { limit: 1 })
+      const song = results[0]
+      if (song) {
+        setWakeRecommend(song.title)
+        setWakeTrigger(c => c + 1)
+        handlePlaySong(song, [song])
+        speak(getFeedback('play', song, lang))
+      }
+    }, [handlePlaySong, lang]),
+    enabled: showOverlay && !voiceActive,
   })
 
   // Voice command handler
   const handleVoiceCommand = useCallback((raw) => {
-    if (!raw || raw.length < 2) return // ignore empty/short
+    if (!raw || raw.length < 2) return
+
+    // Fast path: direct song/artist match
+    const rawLower = raw.toLowerCase().trim()
+    const directMatch = songs.find(s =>
+      s.title.toLowerCase() === rawLower ||
+      s.artist.toLowerCase() === rawLower ||
+      (s.aliases && s.aliases.some(a => a.toLowerCase() === rawLower))
+    )
+    if (directMatch) {
+      console.log('[VoiceCmd] ⚡ direct match:', directMatch.title)
+      handlePlaySong(directMatch, [directMatch])
+      speak(getFeedback('play', directMatch, lang))
+      return
+    }
+
     const intent = parseIntent(raw)
     console.log('[VoiceCmd]', intent)
 
     switch (intent.action) {
       case 'play': {
-        const results = findSongs(intent.params.query)
+        const results = findSongs(intent.params.query, {
+          genre: intent.params.genre,
+          mood: intent.params.mood,
+        })
         if (results.length > 0) {
           handlePlaySong(results[0], results)
-          speak(getFeedback('play', results[0], 'zh'))
+          speak(getFeedback('play', results[0], lang))
         } else {
           const randomSongs = findSongs('')
           handlePlaySong(randomSongs[0], randomSongs)
-          speak(getFeedback('notFound', null, 'zh'))
+          speak(getFeedback('notFound', null, lang))
         }
         break
       }
       case 'pause':
         if (isPlaying) handleTogglePlay()
-        speak(getFeedback('pause', null, 'zh'))
+        speak(getFeedback('pause', null, lang))
         break
       case 'resume':
         if (!isPlaying) handleTogglePlay()
-        speak(getFeedback('resume', null, 'zh'))
+        speak(getFeedback('resume', null, lang))
         break
       case 'next':
         handleNext()
-        speak(getFeedback('next', null, 'zh'))
+        speak(getFeedback('next', null, lang))
         break
       case 'prev':
         handlePrev()
@@ -245,18 +269,33 @@ function AppLayout() {
       case 'random': {
         const shuffled = findSongs('')
         handlePlaySong(shuffled[0], shuffled)
-        speak(getFeedback('random', null, 'zh'))
+        speak(getFeedback('random', null, lang))
         break
       }
+      case 'volumeUp':
+        // Adjust volume by ~10%
+        if (audioRef.current) {
+          audioRef.current.volume = Math.min(1, audioRef.current.volume + 0.1)
+        }
+        break
+      case 'volumeDown':
+        if (audioRef.current) {
+          audioRef.current.volume = Math.max(0, audioRef.current.volume - 0.1)
+        }
+        break
       case 'whatPlaying':
         if (currentSong) speak(`Playing ${currentSong.title} by ${currentSong.artist}`)
         break
+      case 'greet':
+        // Friendly greeting — LLM provides a contextual response
+        speak(intent.params?.response || (lang === 'zh' ? '嘿！想听点什么？' : 'Hey! What would you like to listen to?'))
+        break
       case 'stop':
-        speak(getFeedback('stop', null, 'zh'))
+        speak(getFeedback('stop', null, lang))
         // VoiceButton deactivation is handled internally via onDeactivate callback
         break
     }
-  }, [handlePlaySong, handleTogglePlay, handleNext, handlePrev, isPlaying, currentSong])
+  }, [handlePlaySong, handleTogglePlay, handleNext, handlePrev, isPlaying, currentSong, lang])
 
   const [voiceActive, setVoiceActive] = useState(false)
 
@@ -282,7 +321,7 @@ function AppLayout() {
         />
       )}
       {showOverlay && <TabBar isPlaying={isPlaying} />}
-      {showOverlay && <VoiceButton wakeTrigger={wakeTrigger} wakeRecommend={wakeRecommend} onCommand={handleVoiceCommand} />}
+      {showOverlay && <VoiceButton wakeTrigger={wakeTrigger} wakeRecommend={wakeRecommend} onCommand={handleVoiceCommand} onActiveChange={setVoiceActive} />}
     </div>
   )
 }

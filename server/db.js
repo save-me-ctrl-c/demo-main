@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 const DB_PATH = path.join(__dirname, 'afrogo.db');
 
@@ -12,6 +13,7 @@ function getDb() {
     db.pragma('foreign_keys = ON');
     initTables();
     seedIfEmpty();
+    seedMockCredentials();
   }
   return db;
 }
@@ -20,6 +22,7 @@ function initTables() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, phone TEXT UNIQUE, name TEXT NOT NULL, avatar TEXT DEFAULT '👤',
+      password_hash TEXT DEFAULT '', password_salt TEXT DEFAULT '',
       bio TEXT DEFAULT '', member_level TEXT DEFAULT 'free', points INTEGER DEFAULT 0,
       followers_count INTEGER DEFAULT 0, following_count INTEGER DEFAULT 0,
       likes_count INTEGER DEFAULT 0, posts INTEGER DEFAULT 0, drafts_count INTEGER DEFAULT 0,
@@ -71,6 +74,29 @@ function initTables() {
       selected_mentor_id TEXT, downloaded_packs TEXT DEFAULT ''
     );
   `);
+
+  ensureColumn('users', 'password_hash', "TEXT DEFAULT ''");
+  ensureColumn('users', 'password_salt', "TEXT DEFAULT ''");
+}
+
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some(c => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return { hash, salt };
+}
+
+function setPasswordForPhone(phone, password) {
+  const user = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+  if (!user) return;
+  const { hash, salt } = hashPassword(password);
+  db.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE phone = ?')
+    .run(hash, salt, phone);
 }
 
 function seedIfEmpty() {
@@ -185,4 +211,15 @@ function seedIfEmpty() {
   console.log('✅ Database seeded with 9 real audio tracks and related data');
 }
 
-module.exports = { getDb };
+function seedMockCredentials() {
+  [
+    ['+233200000001', 'amina123'],
+    ['+234800000002', 'chioma123'],
+    ['+277200000007', 'seun123'],
+  ].forEach(([phone, password]) => {
+    const row = db.prepare('SELECT password_hash FROM users WHERE phone = ?').get(phone);
+    if (row && !row.password_hash) setPasswordForPhone(phone, password);
+  });
+}
+
+module.exports = { getDb, hashPassword };

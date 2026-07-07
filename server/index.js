@@ -46,6 +46,30 @@ function isValidVideoFile(name) {
   return /\.(mp4|webm|mov)$/i.test(name);
 }
 
+function parseRangeHeader(range, fileSize) {
+  if (!range) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!match) return false;
+
+  let start;
+  let end;
+  if (match[1] === '' && match[2] === '') return false;
+  if (match[1] === '') {
+    const suffixLength = parseInt(match[2], 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return false;
+    start = Math.max(fileSize - suffixLength, 0);
+    end = fileSize - 1;
+  } else {
+    start = parseInt(match[1], 10);
+    end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start >= fileSize || end < start) {
+    return false;
+  }
+  return { start, end: Math.min(end, fileSize - 1) };
+}
+
 // ── Audio streaming with Range support (for seeking) ──
 app.get('/api/stream/:filename', (req, res) => {
   const filename = req.params.filename;
@@ -65,15 +89,13 @@ app.get('/api/stream/:filename', (req, res) => {
 
     const range = req.headers.range;
     if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const parsedRange = parseRangeHeader(range, fileSize);
 
-      // Fix #2: Prevent NaN from malformed Range
-      if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize || end >= fileSize) {
+      if (!parsedRange) {
         return res.status(416).json({ error: 'Range Not Satisfiable' });
       }
 
+      const { start, end } = parsedRange;
       const chunkSize = end - start + 1;
       res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -104,10 +126,9 @@ app.get('/api/stream-video/:filename', (req, res) => {
     const fileSize = stat.size;
     const range = req.headers.range;
     if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize) return res.status(416).json({ error: 'Range Not Satisfiable' });
+      const parsedRange = parseRangeHeader(range, fileSize);
+      if (!parsedRange) return res.status(416).json({ error: 'Range Not Satisfiable' });
+      const { start, end } = parsedRange;
       res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Content-Type': 'video/mp4',

@@ -31,30 +31,159 @@ const COMMANDS = [
   [/^(停止|关闭|退出|结束|stop|goodbye|bye|quit|exit|shut\s*up)/i, 'stop', () => ({})],
 ]
 
+// Garbled wake word patterns — common ASR misrecognitions of "hey/hi afrogo"
+const GARBLED_WAKE = [
+  /(hey|hi|ok|okay)\s+(after|apple|arrow|afro|affro|afra|aphro)\s*(go|co|goal|gold|coal|goo)?/i,
+  /a\s+fro\s*(go|co)?/i,
+  /(hey|hi)\s+(assistant|asist|assist)/i,
+  /wake\s*up/i,
+  /start\s*listening/i,
+]
+
+// Greeting patterns — don't turn casual hellos into song searches
+const GREET_PATTERNS = [
+  /^(hi|hey|hello|yo|hai|hay|hoi|hola|sup|howdy)(\s|$)/i,
+  /^(good\s(morning|afternoon|evening))/i,
+  /^(what'?s\sup|how('?s| are) (it|you|things)(\sgoing)?)/i,
+  /^(are\syou\s)?(there|awake|listening)/i,
+  /^(你好|嗨|嘿|哈[喽罗]|在吗|在不在|喂|醒醒|有人[在吗]?)/,
+  /^(hi|hey|hello)\s+(afrogo|afro|assistant|there)/i,
+]
+
+// Common ASR fixes — maps garbled speech-to-text to correct terms
+const ASR_FIXES = {
+  // Genres
+  'amapina': 'amapiano', 'amapiana': 'amapiano', 'a mappy anno': 'amapiano',
+  'afro beat': 'afrobeat', 'afro beats': 'afrobeat', 'afro beets': 'afrobeat',
+  'afro fusion': 'Afro-Fusion',
+  // Song titles (common ASR garbles)
+  'funky lagos': 'Funky Lagos', 'funky legos': 'Funky Lagos',
+  'funky lago': 'Funky Lagos', 'funky lakes': 'Funky Lagos',
+  'all fun funky': 'Funky Lagos', 'all funky': 'Funky Lagos',
+  'nadea': 'Nadeya', 'nadia': 'Nadeya', 'nadeya': 'Nadeya',
+  'take some time': 'Take Some Time',
+  'dance in the rain': 'Dance In The Rain',
+  'bootlickers': 'Bootlickers House Remix',
+  'gas and gravity': 'Gas and Gravity',
+  'around the corner': 'Around The Corner',
+  'world fusion': 'World Fusion Music',
+  'for you ill go': 'For You I\'ll Go There', 'for you i will go': 'For You I\'ll Go There',
+  // Artists
+  'groucho marks': 'groucho_marxx', 'groucho marx': 'groucho_marxx',
+  'vj memes': 'VJ_Memes', 'vj memez': 'VJ_Memes',
+  'texas radio fish': 'texasradiofish',
+  'zephyr me': 'zep_hurme', 'zep homey': 'zep_hurme',
+  'laz tunes': 'lazztunes07', 'last tunes': 'lazztunes07',
+  'pretty precious': 'PettyPrecious',
+  'bo crew': 'BOCrew',
+}
+
+function cleanQuery(q) {
+  return q
+    .replace(/^some\s+/i, '')
+    .replace(/^(i want |i wanna |play |put on |can you play |can we |let's |lets )/i, '')
+    .replace(/^a\s+/i, '')
+    .replace(/^all\s+/i, '')
+    .replace(/\s+please$/i, '')
+    .replace(/\s+thanks?(you)?$/i, '')
+    .replace(/\s+for me$/i, '')
+    .trim()
+}
+
 export function parseIntent(raw) {
   const input = raw.toLowerCase().trim()
+
+  // 1. Check garbled wake words first (ASR misheard "hey afrogo")
+  for (const p of GARBLED_WAKE) {
+    if (p.test(input)) return { action: 'greet', params: {}, raw }
+  }
+
+  // 2. Check music commands
   for (const [regex, action, extract] of COMMANDS) {
     const match = input.match(regex)
-    if (match) return { action, params: extract(match), raw }
+    if (match) {
+      const params = extract(match)
+      if (action === 'play' && params.query) {
+        // ASR fixes FIRST (before noise removal — whole phrases may contain noise words)
+        let q = params.query
+        for (const [wrong, right] of Object.entries(ASR_FIXES)) {
+          if (q.toLowerCase().includes(wrong)) q = q.replace(new RegExp(wrong, 'i'), right)
+        }
+        // THEN remove noise words
+        q = cleanQuery(q)
+        params.query = q
+      }
+      return { action, params, raw }
+    }
   }
-  // Default: any unrecognized phrase → play with fuzzy search
-  return { action: 'play', params: { query: input }, raw }
+
+  // 3. Check if it's a casual greeting
+  for (const p of GREET_PATTERNS) {
+    if (p.test(input)) return { action: 'greet', params: {}, raw }
+  }
+
+  // 4. Default: play — apply ASR fixes first, then clean noise
+  let q = input
+  for (const [wrong, right] of Object.entries(ASR_FIXES)) {
+    if (q.toLowerCase().includes(wrong)) q = q.replace(new RegExp(wrong, 'i'), right)
+  }
+  q = cleanQuery(q)
+  return { action: 'play', params: { query: q }, raw }
 }
 
 /* ── Fuzzy Song Search ── */
-export function findSongs(query, limit = 6) {
-  if (!query) return shuffle(songs).slice(0, limit)
+/**
+ * @param {string} query - Search query text
+ * @param {object} [options]
+ * @param {number} [options.limit=6] - Max results
+ * @param {string} [options.genre] - Filter by genre (exact or partial match)
+ * @param {string} [options.mood] - Mood/style hint (used if genre not matched)
+ * @param {number} [options.era] - Filter by release year
+ */
+export function findSongs(query, options = {}) {
+  const { limit = 6, genre, mood, era } = typeof options === 'number'
+    ? { limit: options }  // backward compat: findSongs(q, 6)
+    : options
+
+  // Build a candidate pool with optional genre/mood/era pre-filtering
+  let pool = songs
+
+  if (genre) {
+    const g = genre.toLowerCase()
+    const genreFiltered = songs.filter(s =>
+      (s.genre && s.genre.toLowerCase().includes(g)) ||
+      (s.dance && s.dance.toLowerCase().includes(g))
+    )
+    if (genreFiltered.length > 0) pool = genreFiltered
+  }
+
+  if (mood && pool === songs) {
+    // Mood as secondary filter — try matching against genre/dance
+    const m = mood.toLowerCase()
+    const moodFiltered = songs.filter(s =>
+      (s.genre && s.genre.toLowerCase().includes(m)) ||
+      (s.dance && s.dance.toLowerCase().includes(m))
+    )
+    if (moodFiltered.length > 0) pool = moodFiltered
+  }
+
+  if (era && pool.length > 0) {
+    const eraFiltered = pool.filter(s => s.release_year === era || (s.album && s.album.includes(String(era))))
+    if (eraFiltered.length > 0) pool = eraFiltered
+  }
+
+  if (!query) return shuffle(pool).slice(0, limit)
 
   const q = query.toLowerCase()
 
   // 1. Exact genre match (e.g. "Afrobeat" → all Afrobeat songs)
-  const genreMatch = songs.filter(s =>
+  const genreMatch = pool.filter(s =>
     s.genre.toLowerCase() === q || s.dance.toLowerCase() === q
   )
   if (genreMatch.length > 0) return shuffle(genreMatch)
 
   // 2. Genre/Dance partial match
-  const genrePartial = songs.filter(s =>
+  const genrePartial = pool.filter(s =>
     s.genre.toLowerCase().includes(q) || s.dance.toLowerCase().includes(q)
   )
   if (genrePartial.length > 0) return shuffle(genrePartial)
@@ -65,8 +194,8 @@ export function findSongs(query, limit = 6) {
     return results.map(r => r.item)
   }
 
-  // 4. No good match → random
-  return shuffle(songs).slice(0, limit)
+  // 4. No good match → random from pool
+  return shuffle(pool).slice(0, limit)
 }
 
 /* ── Similar Songs ── */

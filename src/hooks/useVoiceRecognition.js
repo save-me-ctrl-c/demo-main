@@ -14,7 +14,10 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
 
   /* ── Web Speech API ── */
   const startWebSpeech = useCallback(() => {
-    if (!SpeechRecognition) return false
+    if (!SpeechRecognition) {
+      console.log('[VoiceRec] SpeechRecognition not available (requires HTTPS or localhost)')
+      return false
+    }
     try {
       const r = new SpeechRecognition()
       r.lang = lang
@@ -30,14 +33,19 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
         onResult?.(raw)
       }
       r.onerror = (e) => {
+        console.warn('[VoiceRec] Speech error:', e.error, e.message)
         setStatus('error')
         onError?.(e.error)
       }
       r.onend = () => setStatus(s => (s === 'listening' ? 'idle' : s))
       r.start()
+      console.log('[VoiceRec] ✅ Web Speech started')
       recognitionRef.current = r
       return true
-    } catch { return false }
+    } catch (e) {
+      console.warn('[VoiceRec] Web Speech start failed:', e.message)
+      return false
+    }
   }, [lang, onResult, onError])
 
   const stopWebSpeech = useCallback(() => {
@@ -77,17 +85,20 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
       setBackend('web-speech')
       const ok = startWebSpeech()
       if (ok) return
+    } else {
+      console.log('[VoiceRec] No SpeechRecognition — falling back')
     }
 
     // 2. Try Sherpa-ONNX WASM (offline, needs model download)
     const sherpaOk = await initSherpa()
     if (sherpaOk) {
       setBackend('sherpa')
-      // sherpaRef.current.start()
+      console.log('[VoiceRec] ✅ Sherpa ONNX started')
       return
     }
 
     // 3. Fallback: text input mode
+    console.log('[VoiceRec] ⚠️ No voice backend available — using text input mode')
     setBackend('text')
     setStatus('idle')
   }, [SpeechRecognition, startWebSpeech, initSherpa])

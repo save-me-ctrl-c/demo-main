@@ -31,6 +31,7 @@ function Social() {
           desc: v.desc, song: `${v.songTitle} — ${v.songArtist}`,
           likes: v.likes, comments: v.comments, shares: v.shares, tips: v.tips,
           color: v.color, dance: v.danceStyle, region: v.region,
+          liked: v.liked,
           videoUrl: `/api/stream-video/${DANCE_FILES[i] || '1.mp4'}`,
         })))
         setTopics(tRes.topics.map(t => ({ name: t.name, posts: t.postsCount })))
@@ -146,7 +147,7 @@ const VideoSlide = memo(function VideoSlide({ video, idx, active, onToast }) {
   const [prog, setProg] = useState(0)
   const [dur, setDur] = useState('0:00')
   const [cur, setCur] = useState('0:00')
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(!!video.liked)
   const [showGifts, setShowGifts] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [likes, setLikes] = useState(video.likes)
@@ -189,10 +190,22 @@ const VideoSlide = memo(function VideoSlide({ video, idx, active, onToast }) {
     el.currentTime = (e.clientX - rect.left) / rect.width * el.duration
   }, [])
 
-  const handleLike = useCallback((e) => {
+  const handleLike = useCallback(async (e) => {
     e.stopPropagation()
-    setLiked(prev => { const n = !prev; setLikes(l => n ? l + 1 : l - 1); return n })
-  }, [])
+    const nextLiked = !liked
+    const delta = nextLiked ? 1 : -1
+    setLiked(nextLiked)
+    setLikes(l => Math.max(toNumber(l) + delta, 0))
+    try {
+      const res = await videosApi.like(video.id)
+      setLiked(res.liked)
+      setLikes(res.likes)
+    } catch {
+      setLiked(liked)
+      setLikes(l => Math.max(toNumber(l) - delta, 0))
+      onToast('Like failed')
+    }
+  }, [liked, onToast, video.id])
 
   const handleShare = useCallback((e) => {
     e.stopPropagation()
@@ -323,6 +336,12 @@ const VideoSlide = memo(function VideoSlide({ video, idx, active, onToast }) {
 })
 
 function fmt(n) { return n >= 1000 ? (n/1000).toFixed(1).replace(/\.0$/,'') + 'K' : String(n) }
+function toNumber(n) {
+  if (typeof n === 'number') return n;
+  const value = parseFloat(String(n).replace(/,/g, ''));
+  if (String(n).toUpperCase().includes('K')) return Math.round(value * 1000);
+  return Number.isFinite(value) ? value : 0;
+}
 function fmtTime(s) { const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec.toString().padStart(2,'0')}` }
 
 export default Social

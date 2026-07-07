@@ -1,29 +1,38 @@
 const { Router } = require('express');
+const crypto = require('crypto');
 const { v4: uuid } = require('uuid');
-const { getDb } = require('../db');
+const { getDb, hashPassword } = require('../db');
 const { signToken, requireAuth } = require('../middleware/auth');
 
 const router = Router();
 
-// POST /api/auth/login — login or register via phone (mock SMS)
+// POST /api/auth/login — local mock account login/register
 router.post('/login', (req, res) => {
-  const { phone, name } = req.body;
-  if (!phone) {
-    return res.status(400).json({ error: 'Phone number is required' });
+  const { phone, password, name, register } = req.body;
+  const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+  const normalizedPassword = typeof password === 'string' ? password : '';
+
+  if (!normalizedPhone || !normalizedPassword) {
+    return res.status(400).json({ error: 'Phone number and password are required' });
   }
 
   const db = getDb();
-  let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
+  let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(normalizedPhone);
 
   if (!user) {
-    // Auto-register
+    if (!register) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
     const id = uuid();
-    const displayName = name || `User_${phone.slice(-4)}`;
+    const displayName = name || `User_${normalizedPhone.slice(-4)}`;
+    const { hash, salt } = hashPassword(normalizedPassword);
     db.prepare(`
-      INSERT INTO users (id, phone, name, avatar, bio, member_level, region)
-      VALUES (?, ?, ?, '👤', '', 'free', '')
-    `).run(id, phone, displayName);
+      INSERT INTO users (id, phone, name, avatar, password_hash, password_salt, bio, member_level, region)
+      VALUES (?, ?, ?, '👤', ?, ?, '', 'free', '')
+    `).run(id, normalizedPhone, displayName, hash, salt);
     user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  } else if (!user.password_hash || !user.password_salt || !verifyPassword(normalizedPassword, user.password_salt, user.password_hash)) {
+    return res.status(401).json({ error: 'Invalid phone number or password' });
   }
 
   const token = signToken(user.id);
@@ -71,6 +80,13 @@ function sanitizeUser(u) {
     region: u.region,
     createdAt: u.created_at,
   };
+}
+
+function verifyPassword(password, salt, expectedHash) {
+  const { hash } = hashPassword(password, salt);
+  const hashBuffer = Buffer.from(hash, 'hex');
+  const expectedBuffer = Buffer.from(expectedHash, 'hex');
+  return hashBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(hashBuffer, expectedBuffer);
 }
 
 module.exports = router;

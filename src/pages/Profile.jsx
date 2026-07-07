@@ -1,6 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { userProfile as fallbackProfile, menuItems as fallbackMenu } from '../data/mockData'
+import { profile as profileApi } from '../api'
 import { useT } from '../i18n/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../i18n/ThemeContext'
 import LanguageSwitch from '../components/LanguageSwitch'
 import Portal from '../components/Portal'
@@ -76,7 +79,7 @@ function NotifSubPage({ t }) {
   )
 }
 
-function SettingsSubPage({ t, themeKey, toggleTheme }) {
+function SettingsSubPage({ t, themeKey, toggleTheme, onLogout }) {
   return (
     <div className="sub-body">
       <div className="sub-list">
@@ -85,7 +88,7 @@ function SettingsSubPage({ t, themeKey, toggleTheme }) {
         <div className="sub-item"><Shield size={16} /><span>{t('privacy')}</span><ChevronRight size={14} className="icon-muted" /></div>
         <div className="sub-item"><Info size={16} /><span>{t('about')}</span><span className="sub-val">v1.0.0</span></div>
       </div>
-      <button className="sub-btn secondary" style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.2)' }}><LogOut size={14} /> {t('logout')}</button>
+      <button className="sub-btn secondary" onClick={onLogout} style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.2)' }}><LogOut size={14} /> {t('logout')}</button>
     </div>
   )
 }
@@ -194,12 +197,43 @@ const SUB_PAGES = {
 function Profile() {
   const { t } = useT()
   const { themeKey, toggleTheme } = useTheme()
-  const [profile] = useState(fallbackProfile)
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const [profile, setProfile] = useState(fallbackProfile)
   const [menuItems] = useState(fallbackMenu)
-  const [device] = useState(fallbackProfile.device)
+  const [device, setDevice] = useState(fallbackProfile.device)
   const [subPage, setSubPage] = useState(null)
 
+  const handleLogout = () => {
+    logout()
+    navigate('/welcome', { replace: true })
+  }
+
   const SubComponent = subPage ? SUB_PAGES[subPage] : null
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadProfile() {
+      try {
+        const res = await profileApi.get()
+        const next = res.profile
+        if (cancelled) return
+        setProfile({
+          ...fallbackProfile,
+          ...next,
+          id: next.phone || next.id,
+          followers: next.followers,
+          following: next.following,
+          likes: next.likes,
+        })
+        setDevice(next.devices?.[0] || { name: 'Offline', model: '', connected: false })
+      } catch (err) {
+        console.warn('Failed to load profile:', err.message)
+      }
+    }
+    loadProfile()
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <div className="profile-page">
@@ -266,7 +300,7 @@ function Profile() {
       </div>
 
       <div className="pf-footer">
-        <button className="logout-btn">{t('logout')}</button>
+        <button className="logout-btn" onClick={handleLogout}>{t('logout')}</button>
         <p className="pf-version">{t('version')}</p>
       </div>
 
@@ -280,7 +314,7 @@ function Profile() {
                 <h2>{subPage === 'theme' ? t('theme_label') : subPage === 'language' ? t('language') : subPage === 'posts' ? t('posts') : subPage === 'drafts' ? t('drafts') : subPage === 'favorites' ? t('favorites') : subPage === 'tips' ? t('tips_received') : t(subPage)}</h2>
                 <button className="panel-back" onClick={() => setSubPage(null)}><X size={20} /></button>
               </div>
-              {SubComponent ? <SubComponent t={t} themeKey={themeKey} toggleTheme={toggleTheme} /> : (
+              {SubComponent ? <SubComponent t={t} themeKey={themeKey} toggleTheme={toggleTheme} onLogout={handleLogout} /> : (
                 <div className="sub-body"><p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 40 }}>{t('coming_soon')}</p></div>
               )}
             </div>

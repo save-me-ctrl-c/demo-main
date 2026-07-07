@@ -37,7 +37,7 @@ async function ensureToken() {
 
 async function request(path, options = {}) {
   // Auto-auth for endpoints that need it
-  const needsAuth = path.startsWith('/drafts') || path.startsWith('/profile') || path.startsWith('/devices') || path.startsWith('/onboarding');
+  const needsAuth = path.startsWith('/drafts') || path.startsWith('/profile') || path.startsWith('/devices') || path.startsWith('/onboarding') || (path.startsWith('/videos/') && path.endsWith('/like'));
   if (needsAuth) await ensureToken();
 
   const headers = {
@@ -69,8 +69,8 @@ async function request(path, options = {}) {
 
 // --- Auth ---
 export const auth = {
-  login: (phone, name) =>
-    request('/auth/login', { method: 'POST', body: JSON.stringify({ phone, name }) }),
+  login: (phone, password, name, register = false) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ phone, password, name, register }) }),
   guest: () =>
     request('/auth/guest', { method: 'POST' }),
   me: () =>
@@ -124,7 +124,7 @@ export const profile = {
   stats: () =>
     request('/profile/stats'),
   devices: () =>
-    request('/devices'),
+    request('/profile/devices'),
 };
 
 // --- Mentors & Onboarding ---

@@ -6,6 +6,7 @@ import './Welcome.css'
 function Welcome() {
   const navigate = useNavigate()
   const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [loading, setLoading] = useState(false)
@@ -14,10 +15,11 @@ function Welcome() {
   async function handleLogin(e) {
     e.preventDefault()
     if (!phone.trim()) { setError('Please enter your phone number'); return }
+    if (!password) { setError('Please enter your password'); return }
     setLoading(true)
     setError('')
     try {
-      const res = await auth.login(phone.trim(), name.trim() || undefined)
+      const res = await auth.login(phone.trim(), password, name.trim() || undefined, mode === 'register')
       setToken(res.token)
       navigate('/onboarding', { replace: true })
     } catch (err) {
@@ -81,6 +83,15 @@ function Welcome() {
                 autoFocus
               />
             </div>
+            <div className="welcome-field">
+              <span className="welcome-field-icon">🔒</span>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
             {mode === 'register' && (
               <div className="welcome-field">
                 <span className="welcome-field-icon">👤</span>
@@ -107,7 +118,7 @@ function Welcome() {
         </button>
 
         <p className="welcome-hint">
-          Guest mode: try basic features, offline dance lessons & free tracks.
+          Mock accounts: +233200000001 / amina123, +234800000002 / chioma123, +277200000007 / seun123.
         </p>
       </div>
     </div>

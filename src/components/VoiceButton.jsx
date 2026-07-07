@@ -8,49 +8,47 @@ const BTN_SIZE = 54; const MARGIN = 12; const TAB_H = 64
 
 const LOCAL_SONGS = ['Funky Lagos','Nadeya','Take Some Time','Dance In The Rain','Bootlickers House Remix','Gas and Gravity','Around the Corner','World Fusion Music','For You I\'ll Go There']
 
-function VoiceButton({ wakeTrigger = 0, onCommand, wakeRecommend }) {
+function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend }) {
   const { t } = useT()
   const [active, setActive] = useState(false)
   const [showRecommend, setShowRecommend] = useState(false)
+
+  // Notify parent when active state changes (so wake word detection can pause)
+  useEffect(() => { onActiveChange?.(active) }, [active, onActiveChange])
   const [lastCommand, setLastCommand] = useState('')
   const recommend = wakeRecommend || LOCAL_SONGS[Math.floor(Math.random() * LOCAL_SONGS.length)]
 
-  // Wake word: show recommendation + close after 3s
+  // Wake word: show recommendation 3s → then switch to listening mode
   useEffect(() => {
     if (wakeTrigger > 0) {
       setPanelStyle(calcPanelStyle())
       setActive(true)
       setShowRecommend(true)
-      setTimeout(() => { setActive(false); setShowRecommend(false) }, 3000)
+      const timer = setTimeout(() => setShowRecommend(false), 3000)
+      return () => clearTimeout(timer)
     }
   }, [wakeTrigger])
 
-  // Voice recognition — listen for commands when active (after recommendation fades)
-  const idleTimerRef = useRef(null)
+  // Voice recognition — one-shot: speak → recognize → close
   const startRef = useRef(null)
   const { startListening } = useVoiceRecognition({
     onResult: useCallback((raw) => {
       setLastCommand(raw)
       onCommand?.(raw)
-      if (/^(停止|关闭|退出|结束|stop|goodbye|bye|quit|exit)/i.test(raw.toLowerCase())) {
-        setActive(false); setLastCommand(''); clearTimeout(idleTimerRef.current); return
-      }
-      clearTimeout(idleTimerRef.current)
-      idleTimerRef.current = setTimeout(() => { setActive(false); setLastCommand('') }, 12000)
-      setTimeout(() => startRef.current?.(), 800)
+      // Close immediately after recognition (one-shot mode)
+      setTimeout(() => { setActive(false); setLastCommand('') }, 400)
     }, [onCommand]),
   })
 
   useEffect(() => { startRef.current = startListening }, [startListening])
 
-  // Start listening when activated (after recommendation or on manual click)
+  // Start listening when activated (after recommendation ends, or on manual click)
   useEffect(() => {
     if (active && !showRecommend) {
       setLastCommand('')
-      setTimeout(() => startListening(), 300)
-      idleTimerRef.current = setTimeout(() => { setActive(false); setLastCommand('') }, 12000)
+      const t1 = setTimeout(() => startListening(), 300)
+      return () => clearTimeout(t1)
     }
-    return () => clearTimeout(idleTimerRef.current)
   }, [active, showRecommend, startListening])
 
   // Drag-to-move
