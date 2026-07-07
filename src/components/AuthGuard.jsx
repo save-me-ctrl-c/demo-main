@@ -1,10 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
-/**
- * Redirects to /welcome if not authenticated.
- * Shows a loading spinner while checking auth state.
- */
 export function RequireAuth({ children }) {
   const { isLoggedIn, loading } = useAuth()
 
@@ -19,10 +15,6 @@ export function RequireAuth({ children }) {
   return children
 }
 
-/**
- * Redirects to / if already authenticated.
- * Used on /welcome and /onboarding to prevent re-login.
- */
 export function RedirectIfAuth({ children }) {
   const { isLoggedIn, loading } = useAuth()
 

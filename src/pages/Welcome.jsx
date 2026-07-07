@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { auth, setToken } from '../api'
+import { useAuth } from '../contexts/AuthContext'
 import './Welcome.css'
 
 function Welcome() {
   const navigate = useNavigate()
+  const { login, guestLogin } = useAuth()
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [mode, setMode] = useState('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,11 +20,9 @@ function Welcome() {
     setLoading(true)
     setError('')
     try {
-      const res = await auth.login(phone.trim(), password, name.trim() || undefined, mode === 'register')
-      setToken(res.token)
+      await login(phone.trim(), password, name.trim() || undefined, mode === 'register')
       navigate('/onboarding', { replace: true })
     } catch (err) {
-      // Auto-register: just try again
       setError(err.message || 'Login failed')
     } finally {
       setLoading(false)
@@ -33,9 +32,8 @@ function Welcome() {
   async function handleGuest() {
     setLoading(true)
     try {
-      const res = await auth.guest()
-      setToken(res.token)
-      navigate('/onboarding', { replace: true })
+      await guestLogin()
+      navigate('/', { replace: true })
     } catch {
       setError('Guest login failed')
     } finally {

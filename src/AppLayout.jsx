@@ -189,6 +189,9 @@ function AppLayout() {
   // i18n
   const { lang } = useT()
 
+  // Track voice assistant active state (used by useWakeWord below)
+  const [voiceActive, setVoiceActive] = useState(false)
+
   // Wake word detection
   const [wakeTrigger, setWakeTrigger] = useState(0)
   const [wakeRecommend, setWakeRecommend] = useState(null)
@@ -296,8 +299,6 @@ function AppLayout() {
         break
     }
   }, [handlePlaySong, handleTogglePlay, handleNext, handlePrev, isPlaying, currentSong, lang])
-
-  const [voiceActive, setVoiceActive] = useState(false)
 
   const bottomPadding = showOverlay ? (showPlayer && currentSong ? 120 : 64) : 0
 

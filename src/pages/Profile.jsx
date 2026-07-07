@@ -195,9 +195,9 @@ const SUB_PAGES = {
 }
 
 function Profile() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const { themeKey, toggleTheme } = useTheme()
-  const { logout } = useAuth()
+  const { isGuest, logout } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState(fallbackProfile)
   const [menuItems] = useState(fallbackMenu)
@@ -241,11 +241,16 @@ function Profile() {
 
       <div className="pf-header">
         <div className="pf-avatar-wrap">
-          <span className="pf-avatar">{profile.avatar}</span>
-          <span className="pf-level-badge">{profile.memberLevel === 'gold' ? 'GOLD' : 'FREE'}</span>
+          <span className="pf-avatar">{isGuest ? '👤' : profile.avatar}</span>
+          <span className="pf-level-badge" style={isGuest ? {background:'#666',color:'#aaa'} : {}}>
+            {isGuest ? 'GUEST' : profile.memberLevel === 'gold' ? 'GOLD' : 'FREE'}
+          </span>
         </div>
-        <div className="pf-names"><h2>{profile.name}</h2><span className="pf-id">{profile.id}</span></div>
-        <button className="pf-edit-btn"><UserCog size={14} /> {t('edit_profile')}</button>
+        <div className="pf-names">
+          <h2>{isGuest ? (lang === 'zh' ? '游客' : 'Guest') : profile.name}</h2>
+          <span className="pf-id">{isGuest ? (lang === 'zh' ? '登录解锁完整功能' : 'Login for full features') : profile.id}</span>
+        </div>
+        {!isGuest && <button className="pf-edit-btn"><UserCog size={14} /> {t('edit_profile')}</button>}
       </div>
       <p className="pf-bio">{profile.bio}</p>
 

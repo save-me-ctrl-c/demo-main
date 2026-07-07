@@ -6,11 +6,14 @@ import { AuthProvider } from './contexts/AuthContext'
 import { RequireAuth, RedirectIfAuth } from './components/AuthGuard'
 import AppLayout from './AppLayout'
 
-// Auth pages — lazy loaded (only seen once)
+// First screen everyone sees — handles skip logic internally
+import GuestHome from './pages/GuestHome'
+
+// Auth pages — lazy loaded
 const Welcome = lazy(() => import('./pages/Welcome'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 
-// Tab pages — eager loaded (no flicker on tab switch)
+// Tab pages — eager loaded
 import Social from './pages/Social'
 import Create from './pages/Create'
 import Library from './pages/Library'
@@ -33,14 +36,16 @@ function App() {
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Welcome — redirect to / if already logged in (skip if onboarding pending) */}
+                {/* Landing — everyone sees this first (handles 7-day skip internally) */}
+                <Route path="/" element={<GuestHome />} />
+
+                {/* Auth pages */}
                 <Route path="/welcome" element={<RedirectIfAuth><Welcome /></RedirectIfAuth>} />
-                {/* Onboarding — accessible after login, not auto-redirected */}
                 <Route path="/onboarding" element={<Onboarding />} />
 
-                {/* Protected routes — redirect to /welcome if not logged in */}
+                {/* Main app — requires non-guest login */}
                 <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
-                  <Route path="/" element={<Social />} />
+                  <Route path="/app" element={<Social />} />
                   <Route path="/create" element={<Create />} />
                   <Route path="/library" element={<Library />} />
                   <Route path="/profile" element={<Profile />} />

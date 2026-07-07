@@ -150,6 +150,12 @@ function fuzzyMatch(text, words) {
   return false
 }
 
+function fmtErr(e) {
+  if (!e) return 'unknown error'
+  if (typeof e === 'string') return e
+  return e.message || e.error || e.reason || JSON.stringify(e).slice(0, 200)
+}
+
 export default function useWakeWord({ onWake, onSongDetected, enabled = true, lang = 'en-US' } = {}) {
   const [status, setStatus] = useState('loading')
   const audioCtxRef = useRef(null)
@@ -197,6 +203,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
 
   const init = useCallback(async () => {
     try {
+      if (!navigator.mediaDevices) throw new Error('MediaDevices not available (requires HTTPS or localhost)')
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
       const ctx = new AudioContext({ sampleRate: 16000 })
@@ -238,7 +245,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
                 recognizer = { handle, M, createStream() { const h = this.M._SherpaOnnxCreateOfflineStream(this.handle); if (!h) return null; return { handle: h, M, acceptWaveform(sr, samples) { const p = this.M._malloc(samples.length * 4); this.M.HEAPF32.set(samples, p / 4); this.M._SherpaOnnxAcceptWaveformOffline(this.handle, sr, p, samples.length); this.M._free(p) }, free() { if (this.handle) { this.M._SherpaOnnxDestroyOfflineStream(this.handle); this.handle = null } } } }, decode(stream) { this.M._SherpaOnnxDecodeOfflineStream(this.handle, stream.handle) }, getResult(stream) { const r = this.M._SherpaOnnxGetOfflineStreamResult(this.handle, stream.handle); const text = r ? this.M.UTF8ToString(r) : ''; this.M._SherpaOnnxDestroyOfflineRecognizerResult(r); return { text } } }
                 log('✅ Sherpa ASR (Moonshine v2) 已就绪')
               }
-            } catch(e) { log('⚠️ ASR 失败:', e?.message || String(e).slice(0,100)) }
+            } catch(e) { log('⚠️ ASR 模型加载失败:', fmtErr(e)) }
           }
 
           const vad = createVad(M)
@@ -353,7 +360,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
             source.connect(proc); proc.connect(ctx.destination)
             log('✅ Sherpa VAD 已就绪'); setStatus('idle'); return
           }
-        } catch(e) { log('⚠️ Sherpa VAD 失败:', e?.message) }
+        } catch(e) { log('⚠️ Sherpa VAD 初始化失败，回退能量门控:', fmtErr(e)) }
       }
 
       // Energy gate fallback (with rate limiting)
@@ -372,7 +379,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
       }
       requestAnimationFrame(tick)
       log('✅ 能量门控已就绪'); setStatus('idle')
-    } catch(e) { log('⚠️ 麦克风不可用:', e.message); setStatus('error') }
+    } catch(e) { log('⚠️ 麦克风不可用:', fmtErr(e)); setStatus('error') }
   }, [enabled, startWebSpeech, log])
 
   const stop = useCallback(() => {

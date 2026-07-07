@@ -6,7 +6,7 @@ import './TabBar.css'
 function TabBar({ isPlaying }) {
   const { t } = useT()
   const tabs = [
-    { path: '/', label: t('tab_social'), Icon: Home, end: true },
+    { path: '/app', label: t('tab_social'), Icon: Home, end: true },
     { path: '/create', label: t('tab_create'), Icon: Radio },
     { path: '/library', label: t('tab_library'), Icon: Disc3, spin: true },
     { path: '/profile', label: t('tab_me'), Icon: User },

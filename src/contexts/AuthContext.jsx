@@ -16,20 +16,23 @@ export function AuthProvider({ children }) {
     }
     auth.me()
       .then(res => { if (res?.user) setUser(res.user) })
-      .catch(() => { setToken(null) }) // token expired/invalid — clear it
+      .catch(() => {
+        // Server might be down — keep token, skip validation
+        console.warn('[Auth] Server unreachable, using cached session')
+      })
       .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (phone, password, name, isRegister) => {
     const res = await auth.login(phone, password, name, isRegister)
     setToken(res.token)
-    setUser(res.user)
+    setUser(res.user || { id: 'user', name: name || 'User' }) // fallback minimal user
   }, [])
 
   const guestLogin = useCallback(async () => {
     const res = await auth.guest()
     setToken(res.token)
-    setUser(res.user)
+    setUser(res.user || { id: 'guest', name: 'Guest' }) // fallback minimal user
   }, [])
 
   const logout = useCallback(() => {
@@ -38,9 +41,10 @@ export function AuthProvider({ children }) {
   }, [])
 
   const isLoggedIn = !!user
+  const isGuest = user && !user.phone // guest users have no phone
 
   return (
-    <AuthContext.Provider value={{ user, loading, isLoggedIn, login, guestLogin, logout }}>
+    <AuthContext.Provider value={{ user, loading, isLoggedIn, isGuest, login, guestLogin, logout }}>
       {children}
     </AuthContext.Provider>
   )

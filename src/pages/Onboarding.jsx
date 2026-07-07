@@ -56,7 +56,7 @@ function Onboarding() {
         [...selectedPacks]
       )
     } catch { /* non-critical */ }
-    navigate('/', { replace: true })
+    navigate('/app', { replace: true })
   }
 
   // ── Step 1: AI Mentor Selection ──
@@ -85,7 +85,7 @@ function Onboarding() {
               </button>
             ))}
           </div>
-          <button className="onboard-skip" onClick={() => navigate('/', { replace: true })}>
+          <button className="onboard-skip" onClick={() => navigate('/app', { replace: true })}>
             Skip for now
           </button>
         </div>
