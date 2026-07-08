@@ -87,26 +87,16 @@ const DIGITAL_HUMANS = [
   },
 ]
 
-// Resource packs (same structure as afrogo.html)
-const RESOURCE_PACKS = [
-  { name: 'Azonto Basics', lessons: 10, duration: '1h 20m', size: '48 MB', icon: '💃', color: '#FF6B35' },
-  { name: 'Afrobeat Mastery', lessons: 15, duration: '2h 45m', size: '85 MB', icon: '🔥', color: '#FF6B35' },
-  { name: 'Amapiano Grooves', lessons: 12, duration: '2h 10m', size: '62 MB', icon: '🎹', color: '#40C4D8' },
-  { name: 'House Essentials', lessons: 8, duration: '1h 30m', size: '55 MB', icon: '🏠', color: '#40C4D8' },
-  { name: 'Kizomba Connection', lessons: 14, duration: '3h 0m', size: '70 MB', icon: '💑', color: '#FF5C8A' },
-  { name: 'Viral Challenge Pack', lessons: 15, duration: '2h 30m', size: '95 MB', icon: '📱', color: '#00E676' },
-]
-
 function GuestHome() {
   const { t, lang } = useT()
   const navigate = useNavigate()
   const { isLoggedIn, isGuest, logout } = useAuth()
   const [dontShow, setDontShow] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const [mentorModal, setMentorModal] = useState(null)
-  const [selectedDh, setSelectedDh] = useState(0)
+  const [dlCheck, setDlCheck] = useState({ zara: true, tunde: false, ai: false })
   const [downloadedPacks, setDownloadedPacks] = useState(new Set())
-  const [downloading, setDownloading] = useState(null)
 
   // Auto-redirect if skip is active
   useEffect(() => {
@@ -120,11 +110,52 @@ function GuestHome() {
     navigate('/app', { replace: true })
   }
 
-  const handleDownload = async (packName) => {
-    setDownloading(packName)
-    await new Promise(r => setTimeout(r, 1200))
-    setDownloadedPacks(prev => new Set([...prev, packName]))
-    setDownloading(null)
+  // Fake batch download progress
+  const [dlProgress, setDlProgress] = useState(null)
+
+  const handleDownloadAll = async () => {
+    const items = []
+    if (dlCheck.zara && !downloadedPacks.has('Zara')) items.push({ name: 'Zara', mentor: DIGITAL_HUMANS[0] })
+    if (dlCheck.tunde && !downloadedPacks.has('Tunde')) items.push({ name: 'Tunde', mentor: DIGITAL_HUMANS[4] })
+    if (dlCheck.ai && !downloadedPacks.has('AI')) items.push({ name: 'AI', mentor: null })
+    if (items.length === 0) return
+
+    const totalItems = items.length
+    let completed = 0
+    const doneSet = new Set(downloadedPacks)
+
+    for (const item of items) {
+      const mentor = item.mentor
+      const label = item.name === 'AI'
+        ? (lang === 'zh' ? 'AI 打分模型' : 'AI Scoring Model')
+        : `${item.name} ${lang === 'zh' ? '领舞视频' : 'Dance Video'}`
+      const subLabel = item.name === 'AI'
+        ? ''
+        : (lang === 'zh' ? `${item.name} 正在领舞...` : `${item.name} is leading the dance...`)
+
+      const basePercent = (completed / totalItems) * 100
+      // Phase 1: preparing
+      setDlProgress({ label, subLabel, percent: basePercent, phase: 'prep' })
+      await new Promise(r => setTimeout(r, 500))
+
+      // Phase 2: downloading
+      for (let p = 0; p <= 100; p += 10) {
+        const overall = basePercent + (p / totalItems)
+        setDlProgress({ label, subLabel, percent: Math.min(overall, 99), phase: 'dl' })
+        await new Promise(r => setTimeout(r, 150))
+      }
+
+      doneSet.add(item.name)
+      setDownloadedPacks(new Set(doneSet))
+      completed++
+    }
+
+    // Complete
+    setDlProgress({ label: lang === 'zh' ? '下载完成！' : 'Download Complete!', subLabel: '', percent: 100, phase: 'done' })
+    await new Promise(r => setTimeout(r, 800))
+    setDlProgress(null)
+    setShowModal(false)
+    setShowWelcome(true)
   }
 
   // ── Audio ──
@@ -294,61 +325,178 @@ function GuestHome() {
         <div className="guest-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="guest-modal-card" onClick={e => e.stopPropagation()}>
             <div className="guest-modal-title">
-              <Sparkles size={18} /> {lang === 'zh' ? '选择你的数字人舞伴' : 'Choose Your Digital Dance Partner'}
+              <Sparkles size={18} /> {lang === 'zh' ? '下载离线资源' : 'Download Offline Resources'}
             </div>
             <div className="guest-modal-desc">
-              {lang === 'zh' ? '选择一位数字人舞伴，下载离线资源包，无网络也能畅享舞蹈教学' : 'Pick a mentor and download offline packs. Dance anywhere, no internet needed.'}
+              {lang === 'zh'
+                ? '勾选需要的资源后点击下载，下载完成后可在创作页面的录制拍摄中使用数字人领舞功能'
+                : 'Select resources to download. Use digital dance partner in Create > Record.'}
             </div>
 
-            {/* Digital Human Cards */}
-            <div className="guest-dh-grid">
-              {DIGITAL_HUMANS.map((dh, i) => (
-                <div key={dh.name}
-                  className={`guest-dh-card ${selectedDh === i ? 'selected' : ''}`}
-                  onClick={() => setSelectedDh(i)}>
-                  <div className="guest-dh-avatar" style={{ background: dh.color }}>{dh.emoji}</div>
-                  <div className="guest-dh-name">{dh.name}</div>
-                  <div className="guest-dh-style">{dh.style}</div>
-                  <div className="guest-dh-tags">{dh.tags.map(t => <span key={t} className="guest-dh-tag">{t}</span>)}</div>
+            {/* Video Preview Cards */}
+            <div className="guest-preview-grid">
+              {[DIGITAL_HUMANS[0], DIGITAL_HUMANS[4]].map(dh => (
+                <div key={dh.name} className="guest-preview-card"
+                  style={{ borderColor: dlCheck[dh.name === 'Zara' ? 'zara' : 'tunde'] ? dh.color : 'transparent' }}
+                  onClick={() => setDlCheck(c => ({ ...c, [dh.name === 'Zara' ? 'zara' : 'tunde']: !c[dh.name === 'Zara' ? 'zara' : 'tunde'] }))}>
+                  <div className="guest-preview-thumb" style={{
+                    backgroundImage: `url(/media/digiMan/${dh.name === 'Zara' ? 'woman' : 'man'}_thumb.jpg)`,
+                    backgroundSize: 'cover', backgroundPosition: 'center'
+                  }}>
+                    <span className="guest-preview-play">▶</span>
+                    <span className="guest-preview-badge">{dh.name}</span>
+                  </div>
+                  <div className="guest-preview-info">
+                    <span className="guest-preview-name">{dh.name} · {dh.style.split(' ')[0]}</span>
+                    <span className="guest-preview-meta">1080p · ~120 MB</span>
+                  </div>
+                  {dlCheck[dh.name === 'Zara' ? 'zara' : 'tunde'] && <span className="guest-preview-check">✓</span>}
                 </div>
               ))}
             </div>
 
-            {/* Selected mentor packs */}
-            {DIGITAL_HUMANS[selectedDh] && (
-              <>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--color-text)' }}>
-                  {DIGITAL_HUMANS[selectedDh].name} {lang === 'zh' ? '的资源包' : "'s Packs"}
+            {/* Checkboxes */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {/* Zara */}
+              <label className="guest-check-row" style={{ borderLeftColor: DIGITAL_HUMANS[0].color }}>
+                <input type="checkbox" checked={dlCheck.zara} onChange={() => setDlCheck(c => ({ ...c, zara: !c.zara }))}
+                  disabled={downloadedPacks.has('Zara')} />
+                <span className="guest-check-emoji">💃</span>
+                <div className="guest-check-info">
+                  <div className="guest-check-name">Zara · Afrobeat {lang === 'zh' ? '领舞视频' : 'Dance Video'}</div>
+                  <div className="guest-check-meta">{lang === 'zh' ? '含 Shaku Shaku、Gwara Gwara 等经典动作' : 'Shaku Shaku, Gwara Gwara & more'} · ~120 MB</div>
                 </div>
-                {RESOURCE_PACKS.filter((_, i) => i % 3 === selectedDh % 3 || i === selectedDh).slice(0, 3).map(pack => (
-                  <div key={pack.name} className="guest-pack-item">
-                    <div className="guest-pack-icon" style={{ background: pack.color + '22' }}>{pack.icon}</div>
-                    <div className="guest-pack-info">
-                      <div className="guest-pack-name">{pack.name}</div>
-                      <div className="guest-pack-meta">{pack.lessons} {lang === 'zh' ? '课' : 'lessons'} · {pack.duration}</div>
-                    </div>
-                    <div className="guest-pack-size">{pack.size}</div>
-                    <button
-                      className={`guest-pack-btn ${downloadedPacks.has(pack.name) ? 'done' : ''}`}
-                      onClick={() => handleDownload(pack.name)}
-                      disabled={downloading === pack.name || downloadedPacks.has(pack.name)}>
-                      {downloadedPacks.has(pack.name) ? <Check size={12} /> :
-                       downloading === pack.name ? '...' : <Download size={12} />}
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
+                {downloadedPacks.has('Zara') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
+              </label>
+              {/* Tunde */}
+              <label className="guest-check-row" style={{ borderLeftColor: DIGITAL_HUMANS[4].color }}>
+                <input type="checkbox" checked={dlCheck.tunde} onChange={() => setDlCheck(c => ({ ...c, tunde: !c.tunde }))}
+                  disabled={downloadedPacks.has('Tunde')} />
+                <span className="guest-check-emoji">🔥</span>
+                <div className="guest-check-info">
+                  <div className="guest-check-name">Tunde · Street & Viral {lang === 'zh' ? '领舞视频' : 'Dance Video'}</div>
+                  <div className="guest-check-meta">{lang === 'zh' ? '含热门挑战舞步，Freestyle 即兴' : 'Viral challenges, Freestyle moves'} · ~120 MB</div>
+                </div>
+                {downloadedPacks.has('Tunde') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
+              </label>
+              {/* AI Model */}
+              <label className="guest-check-row" style={{ borderLeftColor: '#8D8AD1' }}>
+                <input type="checkbox" checked={dlCheck.ai} onChange={() => setDlCheck(c => ({ ...c, ai: !c.ai }))}
+                  disabled={downloadedPacks.has('AI')} />
+                <span className="guest-check-emoji">🤖</span>
+                <div className="guest-check-info">
+                  <div className="guest-check-name">{lang === 'zh' ? 'AI 舞蹈评分模型' : 'AI Scoring Model'}</div>
+                  <div className="guest-check-meta">ONNX · {lang === 'zh' ? '实时骨骼追踪 · 动作匹配打分' : 'Real-time pose detection & scoring'} · ~45 MB</div>
+                </div>
+                {downloadedPacks.has('AI') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
+              </label>
+            </div>
+
+            {/* Summary */}
+            {(() => {
+              const selectedCount = (dlCheck.zara ? 1 : 0) + (dlCheck.tunde ? 1 : 0) + (dlCheck.ai ? 1 : 0)
+              const newCount = selectedCount - [...downloadedPacks].filter(k => (k === 'Zara' && dlCheck.zara) || (k === 'Tunde' && dlCheck.tunde) || (k === 'AI' && dlCheck.ai)).length
+              const totalSize = (dlCheck.zara && !downloadedPacks.has('Zara') ? 120 : 0)
+                + (dlCheck.tunde && !downloadedPacks.has('Tunde') ? 120 : 0)
+                + (dlCheck.ai && !downloadedPacks.has('AI') ? 45 : 0)
+              return (
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: 16 }}>
+                  {selectedCount > 0
+                    ? (lang === 'zh'
+                      ? `已选 ${selectedCount} 项 · 需下载 ${newCount} 项 · 共约 ${totalSize} MB`
+                      : `Selected ${selectedCount} · New ${newCount} · ~${totalSize} MB`)
+                    : (lang === 'zh' ? '请勾选要下载的资源' : 'Select resources to download')}
+                </div>
+              )
+            })()}
+
+            {/* Download button */}
+            <button className="guest-dl-all-btn"
+              disabled={!dlCheck.zara && !dlCheck.tunde && !dlCheck.ai}
+              onClick={() => handleDownloadAll()}>
+              <Download size={16} />
+              {lang === 'zh' ? '一键下载' : 'Download Selected'}
+            </button>
 
             {/* Footer */}
             <div className="guest-modal-footer">
               <button className="skip-btn" onClick={() => setShowModal(false)}>
                 {lang === 'zh' ? '稍后再说' : 'Skip for now'}
               </button>
-              <button className="go-btn" onClick={() => { setShowModal(false); handleEnter() }}>
-                {lang === 'zh' ? '进入应用' : 'Enter App'}
-              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Download Progress Modal ── */}
+      {dlProgress && (
+        <div className="guest-modal-overlay" style={{ alignItems: 'center' }}>
+          <div className="guest-dl-progress">
+            <div className="gdp-icon" style={{ background: dlProgress.phase === 'done' ? 'var(--color-accent)' : 'var(--color-accent-glow)' }}>
+              {dlProgress.phase === 'done' ? '✅' : '📥'}
+            </div>
+            <h3 className="gdp-title">
+              {dlProgress.phase === 'done'
+                ? (lang === 'zh' ? '下载完成！' : 'Download Complete!')
+                : (lang === 'zh' ? '正在下载...' : 'Downloading...')}
+            </h3>
+            <p className="gdp-sub">
+              {dlProgress.phase === 'prep' && (lang === 'zh' ? '准备资源...' : 'Preparing resources...')}
+              {dlProgress.phase === 'dl' && dlProgress.subLabel}
+              {dlProgress.phase === 'dl' && !dlProgress.subLabel && dlProgress.label}
+              {dlProgress.phase === 'done' && dlProgress.subLabel}
+            </p>
+            <p className="gdp-item-label">{dlProgress.phase === 'dl' ? dlProgress.label : ''}</p>
+
+            {/* Progress bar */}
+            <div className="gdp-bar">
+              <div className="gdp-bar-fill" style={{ width: `${dlProgress.percent}%`, background: 'var(--color-accent)' }} />
+            </div>
+            <span className="gdp-percent">{Math.round(dlProgress.percent)}%</span>
+
+            {/* Done button */}
+            {dlProgress.phase === 'done' && (
+              <button className="gdp-done-btn" onClick={() => setDlProgress(null)}>
+                {lang === 'zh' ? '好的' : 'Got it'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Post-Download Welcome Modal ── */}
+      {showWelcome && (
+        <div className="guest-modal-overlay" style={{ alignItems: 'center' }}>
+          <div className="guest-welcome-card">
+            <div className="gwc-stars">✨💃🕺🔥✨</div>
+            <h2 className="gwc-title">
+              {lang === 'zh' ? '开始探索\nAfro 的世界' : 'Start Exploring\nthe World of Afro'}
+            </h2>
+            <p className="gwc-desc">
+              {lang === 'zh'
+                ? '数字人舞伴和 AI 打分已就绪，进入应用开启你的非洲舞蹈之旅'
+                : 'Your digital dance partner & AI scoring are ready. Start your Afro dance journey!'}
+            </p>
+            <div className="gwc-items">
+              {DIGITAL_HUMANS.filter(d => downloadedPacks.has(d.name)).map(d => (
+                <div key={d.name} className="gwc-item">
+                  <span className="gwc-item-icon" style={{ background: d.color }}>{d.emoji}</span>
+                  <span className="gwc-item-name">{d.name} {lang === 'zh' ? '已就绪' : 'Ready'}</span>
+                </div>
+              ))}
+              {downloadedPacks.has('AI') && (
+                <div className="gwc-item">
+                  <span className="gwc-item-icon" style={{ background: '#8D8AD1' }}>🤖</span>
+                  <span className="gwc-item-name">{lang === 'zh' ? 'AI 打分已就绪' : 'AI Scoring Ready'}</span>
+                </div>
+              )}
+            </div>
+            <button className="gwc-btn" onClick={() => { setShowWelcome(false); handleEnter() }}>
+              {lang === 'zh' ? '进入应用' : 'Enter App'} →
+            </button>
+            <button className="gwc-skip" onClick={() => setShowWelcome(false)}>
+              {lang === 'zh' ? '继续浏览' : 'Keep Browsing'}
+            </button>
           </div>
         </div>
       )}

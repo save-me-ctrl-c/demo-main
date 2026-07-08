@@ -132,8 +132,8 @@ function seedIfEmpty() {
   for (const t of tracks) {
     const sid = uuid();
     songIds.push(sid);
-    const coverId = uuid().slice(0, 8);
-    insertSong.run(sid, t.title, t.artist, t.duration, t.genre, t.dance, t.color, t.year, 'ccMixter Collection', `/media/covers/cover_${coverId}.png`, `CC-licensed — ${t.genre} vibes for dancing`, `/api/stream/${t.file}`);
+    const coverName = t.title.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    insertSong.run(sid, t.title, t.artist, t.duration, t.genre, t.dance, t.color, t.year, 'ccMixter Collection', `/media/covers/${coverName}.png`, `CC-licensed — ${t.genre} vibes for dancing`, `/api/stream/${t.file}`);
   }
 
   // ── PLAYLIST: Local Afro Grooves ──

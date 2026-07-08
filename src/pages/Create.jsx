@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { aiTools, templates, drafts } from '../data/mockData'
+import { aiTools, templates } from '../data/mockData'
 import { useT } from '../i18n/LanguageContext'
 import Portal from '../components/Portal'
 import { Camera, Upload, Sparkles, Scissors, Palette, X, Play, Music, Clock } from '../components/Icon'
@@ -12,33 +12,154 @@ const TOOL_MAP = {
   tool_palette: { Icon: Palette, desc: 'tool_palette_desc', color: '#EF4444' },
 }
 
+// Digital human mentors with videos
+const DIGI_PARTNERS = [
+  { name: 'Zara', emoji: '💃', video: '/media/digiMan/woman.mp4' },
+  { name: 'Tunde', emoji: '🔥', video: '/media/digiMan/man.mp4' },
+]
+
 function Create() {
   const { t } = useT()
   const [activeDetail, setActiveDetail] = useState(null)
-  const [recordState, setRecordState] = useState('idle') // idle | countdown | recording
+  const [recordState, setRecordState] = useState('idle')
   const [countdown, setCountdown] = useState(3)
+  const [digiPartner, setDigiPartner] = useState(DIGI_PARTNERS[0])
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [draftList, setDraftList] = useState([])
+  const [previewBlob, setPreviewBlob] = useState(null) // just-recorded blob for preview
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [draftName, setDraftName] = useState('')
   const timerRef = useRef(null)
+  const digiVideoRef = useRef(null)
+  const camVideoRef = useRef(null)
+  const camStreamRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef = useRef([])
+  const dbRef = useRef(null)
 
-  const startRecord = useCallback(() => {
-    setRecordState('countdown')
-    setCountdown(3)
+  // Open IndexedDB
+  const openDB = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('afrogo_videos', 1)
+      req.onupgradeneeded = () => { req.result.createObjectStore('videos', { keyPath: 'id' }) }
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
   }, [])
 
+  // Load drafts from IndexedDB
   useEffect(() => {
-    if (recordState === 'countdown') {
-      timerRef.current = setInterval(() => {
-        setCountdown(c => {
-          if (c <= 1) {
-            clearInterval(timerRef.current)
-            setRecordState('recording')
-            return 0
-          }
-          return c - 1
-        })
-      }, 800)
+    openDB().then(db => {
+      dbRef.current = db
+      const tx = db.transaction('videos', 'readonly')
+      const req = tx.objectStore('videos').getAll()
+      req.onsuccess = () => {
+        const items = req.result.sort((a, b) => b.createdAt - a.createdAt)
+        setDraftList(items.map(d => ({ ...d, videoUrl: URL.createObjectURL(d.blob) })))
+      }
+    }).catch(() => {})
+  }, [openDB])
+
+  // Save draft to IndexedDB
+  const saveDraft = useCallback(async (blob, duration) => {
+    try {
+      const db = dbRef.current || await openDB()
+      const record = {
+        id: Date.now().toString(36),
+        title: `Recording ${new Date().toLocaleTimeString()}`,
+        createdAt: Date.now(),
+        duration: `${duration}s`,
+        color: '#A455FC',
+        blob: blob,
+      }
+      const tx = db.transaction('videos', 'readwrite')
+      tx.objectStore('videos').add(record)
+      tx.oncomplete = () => {
+        setDraftList(prev => [{ ...record, videoUrl: URL.createObjectURL(blob), blob: undefined }, ...prev])
+      }
+    } catch (e) { console.warn('Save draft failed:', e.message) }
+  }, [openDB])
+
+  // Start camera
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true })
+      camStreamRef.current = stream
+      if (camVideoRef.current) camVideoRef.current.srcObject = stream
+      return true
+    } catch (e) {
+      console.warn('Camera access denied:', e.message)
+      return false
+    }
+  }, [])
+
+  // Stop camera
+  const stopCamera = useCallback(() => {
+    camStreamRef.current?.getTracks().forEach(t => t.stop())
+    camStreamRef.current = null
+    if (camVideoRef.current) camVideoRef.current.srcObject = null
+  }, [])
+
+  // Start recording
+  const startRecord = useCallback(async () => {
+    const hasCam = await startCamera()
+    setRecordState('countdown')
+    setCountdown(3)
+  }, [startCamera])
+
+  // Begin actual recording
+  const beginRecording = useCallback(() => {
+    const stream = camStreamRef.current
+    if (!stream) return
+    chunksRef.current = []
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' })
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+      const url = URL.createObjectURL(blob)
+      setPreviewBlob(blob)
+      setPreviewUrl(url)
+      setDraftName('')
+      setRecordState('idle')
+      setRecordingTime(0)
+    }
+    recorder.start(1000)
+    mediaRecorderRef.current = recorder
+  }, [saveDraft, recordingTime])
+
+  // Recording timer
+  useEffect(() => {
+    if (recordState === 'recording') {
+      timerRef.current = setInterval(() => setRecordingTime(c => c + 1), 1000)
       return () => clearInterval(timerRef.current)
     }
   }, [recordState])
+
+  // Sync digital human video
+  useEffect(() => {
+    const video = digiVideoRef.current
+    if (!video) return
+    if (recordState === 'recording') {
+      video.currentTime = 0
+      video.play().catch(() => {})
+    } else if (recordState === 'idle') {
+      video.pause()
+      video.currentTime = 0
+    }
+  }, [recordState])
+
+  // Countdown
+  useEffect(() => {
+    if (recordState === 'countdown') {
+      const t = setInterval(() => {
+        setCountdown(c => {
+          if (c <= 1) { clearInterval(t); setRecordState('recording'); beginRecording(); return 0 }
+          return c - 1
+        })
+      }, 800)
+      return () => clearInterval(t)
+    }
+  }, [recordState, beginRecording])
 
   const handleRecordClick = () => {
     if (recordState === 'idle') startRecord()
@@ -47,10 +168,39 @@ function Create() {
       setRecordState('idle')
       setCountdown(3)
     } else if (recordState === 'recording') {
-      clearInterval(timerRef.current)
-      setRecordState('idle')
+      mediaRecorderRef.current?.stop()
+      stopCamera()
     }
   }
+
+  // Delete draft
+  const deleteDraft = useCallback(async (id) => {
+    try {
+      const db = dbRef.current || await openDB()
+      const tx = db.transaction('videos', 'readwrite')
+      tx.objectStore('videos').delete(id)
+      tx.oncomplete = () => setDraftList(prev => prev.filter(d => d.id !== id))
+    } catch {}
+  }, [openDB])
+
+  // Confirm save with optional name
+  const confirmSave = useCallback(() => {
+    if (!previewBlob) return
+    saveDraft(previewBlob, recordingTime)
+    setPreviewBlob(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }, [previewBlob, previewUrl, recordingTime, saveDraft])
+
+  // Discard recording
+  const discardRecording = useCallback(() => {
+    setPreviewBlob(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }, [previewUrl])
+
+  // Cleanup on unmount
+  useEffect(() => () => { stopCamera(); mediaRecorderRef.current?.stop() }, [stopCamera])
 
   return (
     <div className="create-page">
@@ -112,18 +262,33 @@ function Create() {
       </div>
 
       {/* === Drafts === */}
-      <div className="section-title"><h2>{t('drafts_title')}</h2></div>
+      <div className="section-title"><h2>{t('drafts_title')} ({draftList.length})</h2></div>
       <div className="draft-list">
-        {drafts.map((d, i) => (
-          <div key={i} className="draft-item">
-            <div className="draft-thumb" style={{ background: `linear-gradient(135deg, ${d.color}, ${d.color}88)` }}><Camera size={14} /></div>
-            <div className="draft-info">
-              <span className="draft-title">{d.title === 'Untitled Draft' ? t('draft_untitled') : d.title}</span>
-              <span className="draft-date">{d.date === '3 hours ago' ? `${t('draft_saved')} 3h` : `${t('draft_saved')} 1d`}</span>
+        {draftList.length === 0 ? (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--fs-sm)', padding: '12px 0' }}>
+            {t('drafts_empty')}
+          </p>
+        ) : (
+          draftList.map((d, i) => (
+            <div key={d.id} className="draft-item">
+              <div className="draft-thumb" style={{ background: `linear-gradient(135deg, ${d.color}, ${d.color}88)`, overflow: 'hidden' }}>
+                {d.videoUrl ? (
+                  <video src={d.videoUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                ) : (
+                  <Camera size={14} />
+                )}
+              </div>
+              <div className="draft-info">
+                <span className="draft-title">{d.title}</span>
+                <span className="draft-date">{d.duration} · {new Date(d.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="draft-actions">
+                <a href={d.videoUrl} download={`afrogo_${d.id}.webm`} className="draft-dl">⬇</a>
+                <button className="draft-del" onClick={(e) => { e.preventDefault(); deleteDraft(d.id) }}>✕</button>
+              </div>
             </div>
-            <button className="draft-edit">{t('edit')}</button>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* ============================================
@@ -137,12 +302,54 @@ function Create() {
             <div className="panel-rec-header">
               <button className="panel-back" onClick={() => { setRecordState('idle'); setActiveDetail(null); }}><X size={22} /></button>
               <span className="panel-rec-title">{t('create_record')}</span>
-              <span className="panel-rec-timer">{recordState === 'recording' ? '00:05' : '00:00'}</span>
+              <span className="panel-rec-timer">{recordState === 'recording' ? `${String(Math.floor(recordingTime / 60)).padStart(2, '0')}:${String(recordingTime % 60).padStart(2, '0')}` : '00:00'}</span>
             </div>
+
+            {/* Digital Human Video — top of recording view */}
+            <div className="panel-dh-video">
+              <video
+                ref={digiVideoRef}
+                src={digiPartner.video}
+                poster={`/media/digiMan/${digiPartner.name === 'Zara' ? 'woman' : 'man'}_thumb.jpg`}
+                loop muted playsInline
+                className={`panel-dh-video-el ${recordState === 'recording' ? 'active' : ''}`}
+              />
+              {/* Recording badge */}
+              {recordState === 'recording' && (
+                <div className="panel-dh-rec-badge">
+                  <span className="panel-dh-rec-dot" /> {digiPartner.name} {t('record_leading')}
+                </div>
+              )}
+              {/* Mentor switcher */}
+              <div className="panel-dh-switch">
+                {DIGI_PARTNERS.map(d => (
+                  <button key={d.name}
+                    className={`panel-dh-switch-btn ${digiPartner.name === d.name ? 'active' : ''}`}
+                    onClick={() => { setDigiPartner(d); if (digiVideoRef.current) digiVideoRef.current.currentTime = 0 }}>
+                    {d.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Camera preview with real feed */}
             <div className="panel-rec-view">
-              <Camera size={48} className="icon-muted" style={{ opacity: recordState === 'countdown' ? 0.05 : 0.15 }} />
+              <video ref={camVideoRef} autoPlay muted playsInline className="panel-cam-feed" />
+              {recordState === 'idle' && !camStreamRef.current && (
+                <Camera size={36} className="icon-muted" style={{ opacity: 0.1, position: 'absolute' }} />
+              )}
               {recordState === 'countdown' && <div className="panel-countdown" key={countdown}>{countdown}</div>}
-              <div className="panel-rec-dh"><span>🤖</span> Zara {t('record_leading')}</div>
+              {recordState === 'recording' && (
+                <div className="panel-rec-indicator">
+                  <span className="panel-rec-dot-red" /> {recordingTime}s
+                </div>
+              )}
+              {/* Last draft thumbnail (like phone camera gallery) */}
+              {recordState === 'idle' && draftList.length > 0 && (
+                <div className="panel-last-draft" onClick={() => setActiveDetail(null)}>
+                  <video src={draftList[0].videoUrl} muted className="panel-last-draft-thumb" />
+                </div>
+              )}
             </div>
             <div className="panel-rec-music">
               <Music size={16} />
@@ -154,7 +361,6 @@ function Create() {
             <div className="panel-rec-controls">
               <button className="panel-rec-side">↻</button>
               <div className="panel-rec-btn-wrap">
-                {/* Countdown ring — SVG circle */}
                 {recordState === 'countdown' && (
                   <svg className="panel-rec-ring" viewBox="0 0 80 80">
                     <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
@@ -178,6 +384,29 @@ function Create() {
               <span><Clock size={12} /> {t('rec_duration')}</span>
               <span>{t('rec_quality')}</span>
               <span><Sparkles size={12} /> {t('rec_beauty')}</span>
+            </div>
+          </div>
+        </div></Portal>
+      )}
+
+      {/* ── Post-Recording Preview Modal ── */}
+      {previewUrl && (
+        <Portal><div className="modal-overlay" style={{ alignItems: 'center', justifyContent: 'center', display: 'flex' }}>
+          <div className="preview-card" onClick={e => e.stopPropagation()}>
+            <h3 className="preview-title">{t('rec_preview_title')}</h3>
+            <div className="preview-video-wrap">
+              <video src={previewUrl} controls autoPlay muted loop className="preview-video" />
+            </div>
+            <input
+              className="preview-name-input"
+              placeholder={t('rec_name_placeholder')}
+              value={draftName}
+              onChange={e => setDraftName(e.target.value)}
+              maxLength={50}
+            />
+            <div className="preview-actions">
+              <button className="preview-btn discard" onClick={discardRecording}>{t('rec_discard')}</button>
+              <button className="preview-btn save" onClick={confirmSave}>{t('rec_save')}</button>
             </div>
           </div>
         </div></Portal>

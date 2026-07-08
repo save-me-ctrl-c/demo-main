@@ -181,17 +181,21 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
           // Check if it's a song name (substring first, then fuzzy)
           const t = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
           const tn = normalize(t)
-          const match = KNOWN_SONGS.find(title => {
-            const tnt = normalize(title)
-            return tn.includes(tnt) || tnt.includes(tn) || similarity(tn, tnt) >= 0.7
-          })
-          if (match) {
-            log('🎵 曲名识别 (Web Speech):', `"${match}"`)
-            onSongDetected?.(match)
-            cooldownRef.current = true; setTimeout(() => { cooldownRef.current = false; setStatus('idle') }, 3000)
-          } else {
-            log('❌ 未匹配')
+          let songMatched = false
+          if (tn.length >= 2) {
+            const match = KNOWN_SONGS.find(title => {
+              const tnt = normalize(title)
+              return tn.includes(tnt) || tnt.includes(tn) || similarity(tn, tnt) >= 0.7
+            })
+            if (match) {
+              log('🎵 曲名识别 (Web Speech):', `"${match}"`)
+              onSongDetected?.(match)
+              cooldownRef.current = true
+              setTimeout(() => { cooldownRef.current = false; setStatus('idle') }, 3000)
+              songMatched = true
+            }
           }
+          if (!songMatched) log('❌ 未匹配')
         }
         recognitionRef.current = null
       }
@@ -290,6 +294,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
               // If it's not a wake word, check if user is saying a song name
               const t = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
               const tn = normalize(t)
+              if (tn.length < 2) return  // skip empty/noise
               for (const title of KNOWN_SONGS) {
                 const tnTitle = normalize(title)
                 // 1. Substring check (handles "I will go for you. I will go." → contains "i will go for you")

@@ -9,7 +9,7 @@ import { useT } from './i18n/LanguageContext'
 import { songs } from './data/mockData'
 import './AppLayout.css'
 
-const FULLSCREEN_ROUTES = ['/player']
+const HIDE_OVERLAY_ROUTES = ['/player']
 const PLAYER_ROUTES = ['/library', '/player']
 
 function AppLayout() {
@@ -28,17 +28,9 @@ function AppLayout() {
   const songRef = useRef(null)
   songRef.current = currentSong
 
-  const isFullscreen = FULLSCREEN_ROUTES.some(r => location.pathname.startsWith(r))
+  const isFullscreen = HIDE_OVERLAY_ROUTES.some(r => location.pathname.startsWith(r))
   const showOverlay = !isFullscreen
   const showPlayer = PLAYER_ROUTES.some(r => location.pathname.startsWith(r))
-
-  // Pause music when entering fullscreen player
-  useEffect(() => {
-    if (isFullscreen && audioRef.current) {
-      audioRef.current.pause()
-      setIsPlaying(false)
-    }
-  }, [isFullscreen])
 
   const currentTime = useMemo(() => {
     if (!currentSong) return '0:00'

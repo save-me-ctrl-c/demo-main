@@ -55,13 +55,14 @@ function Player() {
     return () => { cancelled = true }
   }, [id, currentSong])
 
-  // Auto-play — Fix #5: use ref to avoid stale closure on handlePlaySong/playQueue
+  // Auto-play only when no song is playing or navigating to a different song
   useEffect(() => {
-    if (song && (!currentSong || currentSong.id !== song.id)) {
+    if (!song) return
+    if (!currentSong || currentSong.id !== song.id) {
       const { handlePlaySong, playQueue } = ctxRef.current
       handlePlaySong(song, playQueue.length > 0 ? playQueue : [song])
     }
-  }, [song, currentSong])
+  }, [song?.id, currentSong?.id])
 
   const handleTrackSeek = useCallback((e) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -127,21 +128,22 @@ function Player() {
       </div>
 
       <div className="plr-controls">
-        <button className={`ctrl-btn ${playMode !== 0 ? 'ctrl-active' : ''}`} onClick={handleCycleMode}
-          style={playMode === 0 ? { opacity: 0.4 } : {}}>
+        <button className={`ctrl-btn ctrl-mode ${playMode !== 0 ? 'ctrl-active' : ''}`} onClick={handleCycleMode}>
           {playMode === 2
-            ? <Repeat size={18} className="icon-accent" />
-            : <Shuffle size={18} className={playMode === 1 ? 'icon-accent' : 'icon-secondary'} />}
+            ? <Repeat size={16} />
+            : <Shuffle size={16} className={playMode === 1 ? 'icon-accent' : ''} />}
         </button>
-        <button className="ctrl-btn" onClick={handlePrev}>
-          <SkipBack size={20} />
-        </button>
-        <button className="ctrl-btn ctrl-play" onClick={handleTogglePlay}>
-          {isPlaying ? <Pause size={24} fill="#fff" /> : <Play size={24} fill="#fff" />}
-        </button>
-        <button className="ctrl-btn" onClick={handleNext}>
-          <SkipForward size={20} />
-        </button>
+        <div className="plr-transport">
+          <button className="ctrl-btn" onClick={handlePrev}>
+            <SkipBack size={22} />
+          </button>
+          <button className="ctrl-btn ctrl-play" onClick={handleTogglePlay}>
+            {isPlaying ? <Pause size={26} fill="#fff" /> : <Play size={26} fill="#fff" />}
+          </button>
+          <button className="ctrl-btn" onClick={handleNext}>
+            <SkipForward size={22} />
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -33,6 +33,7 @@ function Social() {
           color: v.color, dance: v.danceStyle, region: v.region,
           liked: v.liked,
           videoUrl: `/api/stream-video/${DANCE_FILES[i] || '1.mp4'}`,
+          thumbnail: `/media/dance/${(DANCE_FILES[i] || '1').replace('.mp4', '')}_thumb.jpg`,
         })))
         setTopics(tRes.topics.map(t => ({ name: t.name, posts: t.postsCount })))
         setRankings(rRes.rankings.map(r => ({ rank: r.rank, name: r.name, score: r.score, type: r.type })))
@@ -96,7 +97,7 @@ function Social() {
       </div>
 
       <div className="feed-card" onClick={() => { if (isPlaying) handleTogglePlay(); enterFeed(0) }} style={{ '--accent': heroVideo?.color, cursor: 'pointer' }}>
-        <div className="feed-thumb"><span className="feed-play-icon">▶</span></div>
+        <div className="feed-thumb" style={{ backgroundImage: `url(${heroVideo?.thumbnail || '/media/dance/1_thumb.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div className="feed-info">
           <div className="feed-user-row">
             <span className="feed-avatar">{heroVideo?.user?.avatar}</span>
@@ -114,7 +115,7 @@ function Social() {
       <div className="h-scroll more-videos-row">
         {videos.map((v, i) => (
           <div key={v.id} className="more-video-item" onClick={() => enterFeed(i)}>
-            <div className="mvi-thumb" style={{ background: `linear-gradient(135deg, ${v.color}, ${v.color}66)` }}><Play size={14} fill="#fff" /></div>
+            <div className="mvi-thumb" style={{ backgroundImage: `url(${v.thumbnail || '/media/dance/1_thumb.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
             <span className="mvi-name">{v.user.name.split(' ')[0]}</span>
             <span className="mvi-dance">{v.dance}</span>
           </div>

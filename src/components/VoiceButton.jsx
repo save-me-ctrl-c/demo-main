@@ -18,31 +18,34 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
   const [lastCommand, setLastCommand] = useState('')
   const recommend = wakeRecommend || LOCAL_SONGS[Math.floor(Math.random() * LOCAL_SONGS.length)]
 
-  // Wake word: show recommendation 3s → then switch to listening mode
+  // Wake word: show recommendation 3s → close
   useEffect(() => {
     if (wakeTrigger > 0) {
       setPanelStyle(calcPanelStyle())
       setActive(true)
       setShowRecommend(true)
-      const timer = setTimeout(() => setShowRecommend(false), 3000)
+      const timer = setTimeout(() => {
+        setActive(false)
+        setShowRecommend(false)
+      }, 3000)
       return () => clearTimeout(timer)
     }
   }, [wakeTrigger])
 
-  // Voice recognition — one-shot: speak → recognize → close
+  // Voice recognition — close after command
   const startRef = useRef(null)
   const { startListening } = useVoiceRecognition({
     onResult: useCallback((raw) => {
       setLastCommand(raw)
       onCommand?.(raw)
-      // Close immediately after recognition (one-shot mode)
+      // Close after any recognized command
       setTimeout(() => { setActive(false); setLastCommand('') }, 400)
     }, [onCommand]),
   })
 
   useEffect(() => { startRef.current = startListening }, [startListening])
 
-  // Start listening when activated (after recommendation ends, or on manual click)
+  // Start listening when activated
   useEffect(() => {
     if (active && !showRecommend) {
       setLastCommand('')
@@ -90,7 +93,9 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
   const onTouchStart = useCallback((e) => { startDrag(e.touches[0].clientX, e.touches[0].clientY) }, [startDrag])
 
   const toggleActive = useCallback(() => { setActive(a => { if (!a) setPanelStyle(calcPanelStyle()); return !a }) }, [])
-  const style = pos ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', bottom: 'auto', zIndex: 110, transition: 'left 0.6s cubic-bezier(0.25, 0.8, 0.25, 1.2), top 0.4s ease' } : {}
+  const defaultStyle = { position: 'fixed', right: MARGIN, top: '50%', transform: 'translateY(-50%)', zIndex: 110 }
+  const dragStyle = pos ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', bottom: 'auto', zIndex: 110, transition: 'left 0.6s cubic-bezier(0.25, 0.8, 0.25, 1.2), top 0.4s ease' } : {}
+  const style = pos ? dragStyle : defaultStyle
 
   return (
     <>
