@@ -50,7 +50,15 @@ function Social() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [feedMode])
 
-  function enterFeed(idx) { setFeedIdx(idx); setFeedMode(true) }
+  function enterFeed(idx) {
+    setFeedIdx(idx)
+    setFeedMode(true)
+    // Scroll to the selected video after render
+    setTimeout(() => {
+      const el = feedRef.current
+      if (el) el.scrollTop = idx * el.clientHeight
+    }, 50)
+  }
   function exitFeed() { setFeedMode(false) }
 
   const showToast = useCallback((msg) => { setToast(msg); setTimeout(() => setToast(''), 2000) }, [])
@@ -96,7 +104,7 @@ function Social() {
         {topics.map((tp, i) => <button key={i} className="topic-chip">{tp.name}</button>)}
       </div>
 
-      <div className="feed-card" onClick={() => { if (isPlaying) handleTogglePlay(); enterFeed(0) }} style={{ '--accent': heroVideo?.color, cursor: 'pointer' }}>
+      <div className="feed-card" onClick={() => { enterFeed(0) }} style={{ '--accent': heroVideo?.color, cursor: 'pointer' }}>
         <div className="feed-thumb" style={{ backgroundImage: `url(${heroVideo?.thumbnail || '/media/dance/1_thumb.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div className="feed-info">
           <div className="feed-user-row">

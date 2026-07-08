@@ -6,6 +6,12 @@ import { useT } from '../i18n/LanguageContext'
 import { ArrowDown, MoreHorizontal, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Download } from '../components/Icon'
 import './Player.css'
 
+function fixCover(url) {
+  if (!url) return null
+  if (/\/cover_[a-f0-9]{8}\.png$/i.test(url)) return null
+  return url
+}
+
 function Player() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -39,7 +45,7 @@ function Player() {
             color: res.song.color || '#1EABBE',
             genre: res.song.genre,
             dance: res.song.dance,
-            coverUrl: res.song.coverUrl,
+            coverUrl: fixCover(res.song.coverUrl),
             type: res.song.type,
             fileUrl: res.song.fileUrl,
           })

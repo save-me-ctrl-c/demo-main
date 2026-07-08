@@ -6,6 +6,13 @@ import { useT } from '../i18n/LanguageContext'
 import { Play, Plus, Download, ArrowLeft, Clock, Sparkles, Music, Crown } from '../components/Icon'
 import './Library.css'
 
+// Filter out UUID-based cover URLs that don't exist
+function fixCover(url) {
+  if (!url) return null
+  if (/\/cover_[a-f0-9]{8}\.png$/i.test(url)) return null
+  return url
+}
+
 // Fix #6: SongRow defined at module scope (not inside Library)
 function SongRow({ s, i, onClick, showIdx = true }) {
   return (
@@ -47,7 +54,7 @@ function Library() {
         const songsRes = await libraryApi.songs()
         setRecentlyPlayed(songsRes.songs.slice(0, 4).map(s => ({
           id: s.id, title: s.title, artist: s.artist, duration: s.duration,
-          genre: s.genre, dance: s.dance, color: s.color, coverUrl: s.coverUrl, type: s.type, fileUrl: s.fileUrl,
+          genre: s.genre, dance: s.dance, color: s.color, coverUrl: fixCover(s.coverUrl), type: s.type, fileUrl: s.fileUrl,
         })))
       } catch (err) {
         console.warn('Failed to fetch songs, using mock:', err.message)
@@ -85,7 +92,7 @@ function Library() {
         if (!cancelled) {
           setPlaylistSongs(res.songs.map(s => ({
             id: s.id, title: s.title, artist: s.artist, duration: s.duration,
-            genre: s.genre, dance: s.dance, color: s.color, coverUrl: s.coverUrl, type: s.type, fileUrl: s.fileUrl,
+            genre: s.genre, dance: s.dance, color: s.color, coverUrl: fixCover(s.coverUrl), type: s.type, fileUrl: s.fileUrl,
           })))
         }
       } catch {

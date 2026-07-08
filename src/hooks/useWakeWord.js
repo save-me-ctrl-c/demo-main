@@ -393,6 +393,15 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
     recognitionRef.current?.abort()
   }, [])
 
-  useEffect(() => { if (enabled) init(); return stop }, [enabled]) // eslint-disable-line
+  useEffect(() => {
+    if (enabled) {
+      // When re-enabling, add startup cooldown to prevent
+      // currently playing music from triggering false wake-ups
+      cooldownRef.current = true
+      setTimeout(() => { cooldownRef.current = false }, 2000)
+      init()
+    }
+    return () => { stop(); cooldownRef.current = false }
+  }, [enabled]) // eslint-disable-line
   return { status, stop }
 }
