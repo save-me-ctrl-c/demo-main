@@ -339,3 +339,64 @@
   font-size: var(--fs-sm); color: var(--color-text-muted);
   margin-bottom: 10px;
 }
+
+/* ── Mode selection panel ── */
+.ds-mode-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.ds-mode-card {
+  width: min(320px, 85vw); padding: 24px 20px;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); text-align: center;
+  animation: scaleIn 0.3s ease;
+}
+.ds-mode-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.ds-mode-sub { font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 20px; }
+.ds-mode-buttons { display: flex; flex-direction: column; gap: 10px; }
+.ds-mode-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
+  background: var(--color-bg); cursor: pointer;
+  transition: all 0.15s ease; text-align: center;
+}
+.ds-mode-btn.upload:hover { border-color: #1EABBE; background: rgba(30, 171, 190, 0.08); }
+.ds-mode-btn.live:hover { border-color: var(--color-accent); background: rgba(255, 92, 138, 0.08); }
+.ds-mode-icon { font-size: 2rem; }
+.ds-mode-label { font-size: 0.9rem; font-weight: 700; }
+.ds-mode-desc { font-size: 0.65rem; color: var(--color-text-muted); }
+.ds-mode-back {
+  margin-top: 14px; background: none; border: none;
+  color: var(--color-text-muted); font-size: 0.7rem; cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ── Upload processing panel ── */
+.ds-upload-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+}
+.ds-upload-card {
+  width: min(340px, 85vw); padding: 32px 24px;
+  background: var(--color-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); text-align: center;
+  animation: scaleIn 0.3s ease;
+}
+.ds-upload-card h3 { font-size: 1rem; margin-bottom: 20px; }
+.ds-upload-progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ds-upload-progress-bar {
+  flex: 1; height: 8px; background: #2a2a44; border-radius: 4px; overflow: hidden;
+}
+.ds-upload-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #1EABBE, #FF5C8A);
+  border-radius: 4px; transition: width 0.3s;
+}
+.ds-upload-progress-pct {
+  font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  min-width: 36px; text-align: right;
+}
+.ds-upload-status {
+  font-size: 0.7rem; color: var(--color-text-muted); margin-top: 8px;
+}

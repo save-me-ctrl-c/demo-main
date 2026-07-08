@@ -49,6 +49,12 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   const [refTracks, setRefTracks] = useState([])
   const [refShoulderW, setRefShoulderW] = useState(0.28)
   const [loadingTrackId, setLoadingTrackId] = useState(null) // track being fetched
+  const [scoringMode, setScoringMode] = useState(null) // null | 'live' | 'upload'
+
+  // ── Video upload scoring state ──
+  const [uploadProgress, setUploadProgress] = useState(0) // 0-100
+  const [uploadStatus, setUploadStatus] = useState('') // processing text
+  const uploadVideoRef = useRef(null)
 
   // ── Countdown ──
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
@@ -176,7 +182,8 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
       if (fullTrack) {
         setRefTrack(fullTrack)
         setRefShoulderW(getRefShoulderWidth(fullTrack))
-        setPanelState('idle')
+        setScoringMode(null)
+        setPanelState('modeSelect')
       }
     } catch (err) {
       console.error('Failed to load reference track:', err)
@@ -440,8 +447,174 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     setScore(0)
     setComboState(createComboState())
     setRefTrack(null)
+    setScoringMode(null)
     setPanelState('selecting')
   }, [])
+
+  // ── Mode selection handlers ──
+  const handleSelectLive = useCallback(() => {
+    setScoringMode('live')
+    setPanelState('idle')
+  }, [])
+
+  const handleSelectUpload = useCallback(() => {
+    setScoringMode('upload')
+    // Trigger file picker
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'video/*'
+    input.onchange = (e) => {
+      const file = e.target.files?.[0]
+      if (file) processUploadedVideo(file)
+    }
+    input.click()
+  }, [])
+
+  // ── Process uploaded video frame by frame ──
+  const processUploadedVideo = useCallback(async (file) => {
+    if (!refTrack) return
+
+    setPanelState('uploading')
+    setUploadProgress(0)
+    setUploadStatus('Loading video...')
+    setScore(0)
+    setResults(null)
+
+    try {
+      // Create temp video element
+      const videoEl = document.createElement('video')
+      videoEl.muted = true
+      videoEl.playsInline = true
+
+      await new Promise((resolve, reject) => {
+        videoEl.src = URL.createObjectURL(file)
+        videoEl.onloadedmetadata = resolve
+        videoEl.onerror = reject
+      })
+
+      const videoDuration = videoEl.duration
+      const fps = refTrack.fps || 15
+      const frameInterval = 1 / fps
+      const totalFrames = Math.min(
+        Math.floor(videoDuration / frameInterval),
+        refTrack.frames.length
+      )
+
+      setUploadStatus(`Processing 0/${totalFrames} frames...`)
+
+      // Create MediaPipe Pose instance
+      const Pose = window.Pose
+      if (!Pose) throw new Error('MediaPipe not loaded')
+
+      const poseInstance = new Pose({
+        locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}`,
+      })
+      poseInstance.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      })
+
+      // Warm up
+      await new Promise((resolve) => {
+        poseInstance.onResults(() => resolve())
+        videoEl.currentTime = 0
+      })
+
+      // Extract landmarks from a single frame
+      const extractLandmarks = (time) => {
+        return new Promise((resolve) => {
+          let resolved = false
+          const handler = (results) => {
+            if (resolved) return; resolved = true
+            poseInstance.onResults(() => {})
+            if (results.poseLandmarks) {
+              resolve(results.poseLandmarks.map(lm => ({
+                x: lm.x, y: lm.y, z: lm.z,
+                visibility: lm.visibility != null ? lm.visibility : 1.0,
+              })))
+            } else {
+              resolve(null)
+            }
+          }
+          poseInstance.onResults(handler)
+          videoEl.currentTime = time
+          const onSeeked = () => {
+            videoEl.removeEventListener('seeked', onSeeked)
+            poseInstance.send({ image: videoEl })
+          }
+          videoEl.addEventListener('seeked', onSeeked)
+        })
+      }
+
+      // Process all frames
+      const allFrames = []
+      let totalPoseScore = 0
+      let validFrames = 0
+      let comboStateLocal = createComboState()
+
+      for (let i = 0; i < totalFrames; i++) {
+        const seekTime = i * frameInterval
+        const timestampMs = Math.round(seekTime * 1000)
+
+        const landmarks = await extractLandmarks(seekTime)
+        if (landmarks && landmarks.length >= 33) {
+          // Find matching reference frame
+          const refFrame = findClosestRefFrame(refTrack.frames, timestampMs)
+          if (refFrame) {
+            const normalized = normalizeLandmarks(landmarks, refShoulderW)
+            const frameScore = calculatePoseScore(normalized, refFrame.landmarks)
+            totalPoseScore += frameScore
+            validFrames++
+            allFrames.push({ landmarks, timestamp_ms: timestampMs })
+            comboStateLocal = evaluateCombo(frameScore, comboStateLocal)
+            if (comboStateLocal.comboCounter > comboStateLocal.maxCombo) {
+              comboStateLocal.maxCombo = comboStateLocal.comboCounter
+            }
+          }
+        }
+
+        // Update progress every 10 frames
+        if (i % 10 === 0 || i === totalFrames - 1) {
+          const pct = Math.round(((i + 1) / totalFrames) * 100)
+          setUploadProgress(pct)
+          setUploadStatus(`Processing ${i + 1}/${totalFrames} frames (${validFrames} with poses)...`)
+        }
+      }
+
+      poseInstance.close()
+      URL.revokeObjectURL(videoEl.src)
+
+      // Compute final scores
+      const avgPoseScore = validFrames > 0 ? totalPoseScore / validFrames : 0
+      const rhythmScore = computeRhythmScore(
+        allFrames,
+        refTrack.frames.filter(f => f.timestamp_ms <= allFrames[allFrames.length - 1]?.timestamp_ms || 0)
+      )
+      const fusion = computeFusionScore(avgPoseScore, rhythmScore)
+
+      const finalResults = {
+        overall: fusion.overall,
+        poseScore: Math.round(avgPoseScore * 100),
+        rhythmScore: Math.round(rhythmScore * 100),
+        grade: fusion.grade,
+        gradeLabel: fusion.gradeLabel,
+        maxCombo: comboStateLocal.maxCombo,
+        comboLevel: comboStateLocal.level,
+        durationMs: allFrames.length > 0 ? allFrames[allFrames.length - 1].timestamp_ms : 0,
+      }
+
+      setResults(finalResults)
+      setUploadProgress(100)
+      setPanelState('results')
+    } catch (err) {
+      console.error('Video processing error:', err)
+      setErrorMsg('视频处理失败：' + (err.message || '未知错误'))
+      setPanelState('error')
+    }
+  }, [refTrack, refShoulderW])
 
   // ── Record reference track ──
   const handleStartRecordRef = useCallback(() => {
@@ -614,6 +787,47 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
                     ))
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode selection (after picking a track) */}
+          {panelState === 'modeSelect' && refTrack && (
+            <div className="ds-mode-overlay">
+              <div className="ds-mode-card">
+                <h3 className="ds-mode-title">{refTrack.title}</h3>
+                <p className="ds-mode-sub">选择打分方式</p>
+                <div className="ds-mode-buttons">
+                  <button className="ds-mode-btn upload" onClick={handleSelectUpload}>
+                    <span className="ds-mode-icon">📹</span>
+                    <span className="ds-mode-label">上传视频打分</span>
+                    <span className="ds-mode-desc">上传已录好的舞蹈视频</span>
+                  </button>
+                  <button className="ds-mode-btn live" onClick={handleSelectLive}>
+                    <span className="ds-mode-icon">📷</span>
+                    <span className="ds-mode-label">实时摄像头打分</span>
+                    <span className="ds-mode-desc">开启摄像头实时对比</span>
+                  </button>
+                </div>
+                <button className="ds-mode-back" onClick={() => { setRefTrack(null); setPanelState('selecting') }}>
+                  重新选择舞蹈
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Video upload processing */}
+          {panelState === 'uploading' && (
+            <div className="ds-upload-overlay">
+              <div className="ds-upload-card">
+                <h3>📹 正在分析视频</h3>
+                <div className="ds-upload-progress-wrap">
+                  <div className="ds-upload-progress-bar">
+                    <div className="ds-upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                  <span className="ds-upload-progress-pct">{uploadProgress}%</span>
+                </div>
+                <p className="ds-upload-status">{uploadStatus}</p>
               </div>
             </div>
           )}
