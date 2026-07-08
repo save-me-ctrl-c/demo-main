@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pose Data Extractor — AfroGO</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #FF5C8A, #FF8C3D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { color: #888; font-size: 0.85rem; margin-bottom: 20px; }
+
+  .card {
+    background: #1a1a2e;
+    border: 1px solid #2a2a44;
+    border-radius: 14px;
+    padding: 20px;
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 16px;
+  }
+
+  .preview-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .video-box {
+    flex: 1;
+    min-width: 280px;
+    position: relative;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .video-box video, .video-box canvas {
+    width: 100%;
+    display: block;
+  }
+  .video-box canvas {
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  .config-box {
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .config-box label {
+    font-size: 0.8rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .config-box input, .config-box select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #3a3a55;
+    background: #12121f;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+  }
+  .config-box input:focus { border-color: #FF5C8A; outline: none; }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #FF5C8A, #FF8C3D);
+    color: #fff;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,92,138,0.4); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary {
+    background: #2a2a44;
+    color: #ccc;
+  }
+  .btn-secondary:hover { background: #3a3a55; }
+  .btn-import {
+    background: #1EABBE;
+    color: #fff;
+  }
+  .btn-import:hover { background: #22C5DD; transform: translateY(-1px); }
+
+  .divider-text {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.7rem; color: #666; text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 8px 0;
+  }
+  .divider-text::before, .divider-text::after {
+    content: ''; flex: 1; height: 1px; background: #2a2a44;
+  }
+
+  .progress-wrap {
+    margin-top: 12px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #2a2a44;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF5C8A, #FF8C3D);
+    border-radius: 4px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .output-area {
+    width: 100%;
+    max-width: 720px;
+  }
+  .output-area textarea {
+    width: 100%;
+    height: 200px;
+    background: #12121f;
+    border: 1px solid #3a3a55;
+    border-radius: 10px;
+    color: #b0ffb0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    padding: 12px;
+    resize: vertical;
+  }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+
+  #import-file-input { display: none; }
+
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .status-idle { background: #2a2a44; color: #888; }
+  .status-running { background: #ff8c3d22; color: #FF8C3D; }
+  .status-done { background: #00e67622; color: #00E676; }
+  .status-error { background: #ff174422; color: #FF1744; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .stat-item {
+    background: #12121f;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.2rem; font-weight: 700; color: #fff; }
+  .stat-lbl { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00E676;
+    color: #000;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #EF4444; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>💃 Pose Data Extractor</h1>
+<p class="sub">Extract MediaPipe pose landmarks from video for AfroGO dance scoring</p>
+
+<div class="card">
+  <div class="preview-row">
+    <div class="video-box">
+      <video id="video" src="amapiano.mp4" crossorigin="anonymous" muted playsinline></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="config-box">
+      <div>
+        <label>Target FPS</label>
+        <select id="fps-select">
+          <option value="10">10 fps (fast, lower accuracy)</option>
+          <option value="15" selected>15 fps (balanced)</option>
+          <option value="20">20 fps (good)</option>
+          <option value="30">30 fps (full, slow)</option>
+        </select>
+      </div>
+      <div>
+        <label>Track Title</label>
+        <input id="track-title" value="Amapiano Tutorial" placeholder="Track title">
+      </div>
+      <div>
+        <label>Dance Style</label>
+        <input id="dance-style" value="Amapiano" placeholder="e.g. Amapiano">
+      </div>
+      <div>
+        <label>Status</label>
+        <span id="status-badge" class="status-badge status-idle">IDLE</span>
+      </div>
+      <div id="stats" class="stats-grid" style="display:none">
+        <div class="stat-item"><div class="stat-val" id="stat-frames">0</div><div class="stat-lbl">Frames</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-duration">0s</div><div class="stat-lbl">Duration</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-fps">0</div><div class="stat-lbl">Actual FPS</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+    <div class="progress-text">
+      <span id="progress-label">Ready</span>
+      <span id="progress-pct">0%</span>
+    </div>
+  </div>
+</div>
+
+<div class="output-area">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+    <span style="font-weight:600; font-size:0.9rem">📦 Output JSON</span>
+    <span style="font-size:0.7rem; color:#888" id="json-size"></span>
+  </div>
+  <textarea id="output" readonly placeholder="Extracted pose track JSON will appear here..."></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-start" onclick="startExtraction()">▶ Start Extraction</button>
+    <button class="btn btn-secondary" id="btn-preview" onclick="previewFrame()" disabled>👁 Preview Current Frame</button>
+    <button class="btn btn-secondary" id="btn-download" onclick="downloadJSON()" disabled>⬇ Download JSON</button>
+    <button class="btn btn-secondary" id="btn-copy" onclick="copyJSON()" disabled>📋 Copy</button>
+    <button class="btn btn-primary" id="btn-save-db" onclick="saveToDB()" disabled>💾 Save to App DB</button>
+  </div>
+
+  <!-- Import JSON section -->
+  <div class="divider-text">or import existing pose data</div>
+  <div class="btn-row">
+    <input type="file" id="import-file-input" accept=".json" onchange="handleImportFile(event)">
+    <button class="btn btn-import" onclick="document.getElementById('import-file-input').click()">
+      📥 Import JSON File
+    </button>
+    <button class="btn btn-import" id="btn-load-bundled" onclick="loadBundledTrack()">
+      🎵 Load Amapiano Tutorial
+    </button>
+    <span style="font-size:0.7rem; color:#666; margin-left:4px">Load a .json pose track directly into app database</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MediaPipe Pose -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
+<script>
+// ── DOM refs ──
+const video = document.getElementById('video')
+const canvas = document.getElementById('canvas')
+const ctx = canvas.getContext('2d')
+const outputTA = document.getElementById('output')
+const progressFill = document.getElementById('progress-fill')
+const progressLabel = document.getElementById('progress-label')
+const progressPct = document.getElementById('progress-pct')
+const statusBadge = document.getElementById('status-badge')
+const jsonSize = document.getElementById('json-size')
+const statsDiv = document.getElementById('stats')
+
+// ── State ──
+let extractedFrames = []
+let isRunning = false
+let abortController = null
+
+// ── Skeleton drawing (same definitions as danceScoring.js) ──
+const SKELETON_CONNECTIONS = [
+  [11,12],[11,23],[12,24],[23,24],[11,13],[13,15],
+  [12,14],[14,16],[23,25],[25,27],[24,26],[26,28],
+]
+const SKELETON_JOINTS = [11,12,13,14,15,16,23,24,25,26,27,28]
+
+function drawSkeleton(landmarks, w, h) {
+  ctx.clearRect(0, 0, w, h)
+  if (!landmarks || landmarks.length < 33) return
+  ctx.strokeStyle = '#00E676'
+  ctx.lineWidth = 2
+  ctx.shadowColor = 'rgba(0,230,118,0.5)'
+  ctx.shadowBlur = 6
+  ctx.lineCap = 'round'
+
+  for (const [from, to] of SKELETON_CONNECTIONS) {
+    const a = landmarks[from], b = landmarks[to]
+    if (!a || !b || (a.visibility!=null && a.visibility<0.4) || (b.visibility!=null && b.visibility<0.4)) continue
+    ctx.beginPath()
+    ctx.moveTo(a.x * w, a.y * h)
+    ctx.lineTo(b.x * w, b.y * h)
+    ctx.stroke()
+  }
+  for (const idx of SKELETON_JOINTS) {
+    const p = landmarks[idx]
+    if (!p || (p.visibility!=null && p.visibility<0.4)) continue
+    ctx.fillStyle = '#00E676'
+    ctx.beginPath()
+    ctx.arc(p.x * w, p.y * h, 3, 0, Math.PI*2)
+    ctx.fill()
+  }
+  ctx.shadowBlur = 0
+}
+
+// ── Toast ──
+function showToast(msg, isError) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  if (isError) t.classList.add('error')
+  else t.classList.remove('error')
+  setTimeout(() => { t.classList.remove('show'); t.classList.remove('error') }, 2500)
+}
+
+// ── Set status badge ──
+function setStatus(type) {
+  statusBadge.className = 'status-badge status-' + type
+  const map = { idle:'IDLE', running:'RUNNING', done:'DONE', error:'ERROR' }
+  statusBadge.textContent = map[type] || type.toUpperCase()
+}
+
+// ── Initialize MediaPipe Pose ──
+let pose = null
+
+async function initPose() {
+  if (pose) return pose
+  if (!window.Pose) throw new Error('MediaPipe Pose not loaded')
+  pose = new Pose({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`,
+  })
+  pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    smoothSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  })
+  // Warm up: send first frame once video is ready
+  await new Promise((resolve) => {
+    pose.onResults((results) => {
+      resolve()
+    })
+    if (video.readyState >= 2) {
+      pose.send({ image: video })
+    } else {
+      video.addEventListener('loadeddata', () => pose.send({ image: video }), { once: true })
+    }
+  })
+  return pose
+}
+
+// ── Extract single frame at current video time ──
+function extractFrameAt(videoEl, p) {
+  return new Promise((resolve) => {
+    let resolved = false
+    const handler = (results) => {
+      if (resolved) return
+      resolved = true
+      p.onResults(() => {})
+      if (results.poseLandmarks) {
+        const landmarks = results.poseLandmarks.map(lm => ({
+          x: lm.x, y: lm.y, z: lm.z,
+          visibility: lm.visibility != null ? lm.visibility : 1.0,
+        }))
+        resolve(landmarks)
+      } else {
+        resolve(null)
+      }
+    }
+    p.onResults(handler)
+    p.send({ image: videoEl })
+  })
+}
+
+// ── Main extraction ──
+async function startExtraction() {
+  if (isRunning) return
+  isRunning = true
+  abortController = new AbortController()
+  const signal = abortController.signal
+
+  extractedFrames = []
+  outputTA.value = ''
+  jsonSize.textContent = ''
+  statsDiv.style.display = 'none'
+
+  const targetFps = parseInt(document.getElementById('fps-select').value)
+  const title = document.getElementById('track-title').value || 'Untitled'
+  const danceStyle = document.getElementById('dance-style').value || 'Unknown'
+
+  setStatus('running')
+  document.getElementById('btn-start').disabled = true
+  document.getElementById('btn-preview').disabled = true
+  document.getElementById('btn-download').disabled = true
+  document.getElementById('btn-copy').disabled = true
+  document.getElementById('btn-save-db').disabled = true
+  progressFill.style.width = '0%'
+  progressPct.textContent = '0%'
+
+  try {
+    if (video.readyState < 2) {
+      progressLabel.textContent = 'Loading video...'
+      await new Promise((r) => { video.addEventListener('loadeddata', r, { once: true }); video.load() })
+    }
+
+    const duration = video.duration
+    progressLabel.textContent = `Video: ${duration.toFixed(1)}s`
+
+    progressLabel.textContent = 'Initializing MediaPipe Pose...'
+    const p = await initPose()
+    if (signal.aborted) return
+
+    const frameInterval = 1 / targetFps
+    const totalFrames = Math.floor(duration / frameInterval)
+    progressLabel.textContent = `Extracting ${totalFrames} frames @ ${targetFps} fps...`
+
+    let detectedFrames = 0
+    let lastProgressUpdate = 0
+
+    for (let i = 0; i < totalFrames; i++) {
+      if (signal.aborted) break
+
+      const seekTime = i * frameInterval
+      video.currentTime = seekTime
+      await new Promise((r) => {
+        const onSeeked = () => { video.removeEventListener('seeked', onSeeked); r() }
+        video.addEventListener('seeked', onSeeked)
+      })
+
+      if (signal.aborted) break
+
+      const landmarks = await extractFrameAt(video, p)
+      if (landmarks && landmarks.length >= 33) {
+        extractedFrames.push({
+          timestamp_ms: Math.round(seekTime * 1000),
+          landmarks,
+        })
+        detectedFrames++
+      }
+
+      const pct = Math.round(((i + 1) / totalFrames) * 100)
+      if (pct !== lastProgressUpdate || i === totalFrames - 1) {
+        lastProgressUpdate = pct
+        progressFill.style.width = pct + '%'
+        progressPct.textContent = pct + '%'
+        progressLabel.textContent = `Frame ${i + 1}/${totalFrames} — ${detectedFrames} with poses`
+      }
+
+      if (i % 5 === 0 && landmarks && landmarks.length >= 33) {
+        const w = video.videoWidth || 640
+        const h = video.videoHeight || 480
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w; canvas.height = h
+        }
+        drawSkeleton(landmarks, w, h)
+      }
+    }
+
+    const actualDuration = extractedFrames.length > 0
+      ? extractedFrames[extractedFrames.length - 1].timestamp_ms
+      : 0
+
+    const track = {
+      id: 'ext_' + Date.now().toString(36),
+      title,
+      danceStyle,
+      duration_ms: actualDuration,
+      fps: targetFps,
+      frames: extractedFrames,
+      frameCount: extractedFrames.length,
+      createdAt: Date.now(),
+      source: 'extracted_from_video',
+    }
+
+    const json = JSON.stringify(track, null, 2)
+    outputTA.value = json
+    jsonSize.textContent = `${(json.length / 1024).toFixed(1)} KB · ${extractedFrames.length} frames`
+
+    statsDiv.style.display = 'grid'
+    document.getElementById('stat-frames').textContent = extractedFrames.length
+    document.getElementById('stat-duration').textContent = (actualDuration / 1000).toFixed(1) + 's'
+    document.getElementById('stat-fps').textContent = targetFps
+
+    setStatus('done')
+    document.getElementById('btn-preview').disabled = false
+    document.getElementById('btn-download').disabled = false
+    document.getElementById('btn-copy').disabled = false
+    document.getElementById('btn-save-db').disabled = false
+    progressLabel.textContent = `Done! ${extractedFrames.length}/${totalFrames} frames extracted.`
+
+  } catch (err) {
+    console.error('Extraction error:', err)
+    setStatus('error')
+    progressLabel.textContent = 'Error: ' + err.message
+  } finally {
+    isRunning = false
+    document.getElementById('btn-start').disabled = false
+    document.getElementById('btn-preview').disabled = false
+    document.getElementById('btn-start').textContent = '🔄 Re-extract'
+  }
+}
+
+// ── Preview single frame ──
+async function previewFrame() {
+  try {
+    const p = await initPose()
+    const landmarks = await extractFrameAt(video, p)
+    if (landmarks && landmarks.length >= 33) {
+      const w = video.videoWidth || 640
+      const h = video.videoHeight || 480
+      canvas.width = w; canvas.height = h
+      drawSkeleton(landmarks, w, h)
+    }
+  } catch (e) { console.error(e) }
+}
+
+// ── Download ──
+function downloadJSON() {
+  if (!outputTA.value) return
+  const blob = new Blob([outputTA.value], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const title = document.getElementById('track-title').value || 'track'
+  a.download = title.replace(/\s+/g, '_').toLowerCase() + '_pose.json'
+  a.click()
+  URL.revokeObjectURL(url)
+  showToast('Downloaded!')
+}
+
+// ── Copy ──
+function copyJSON() {
+  if (!outputTA.value) return
+  navigator.clipboard.writeText(outputTA.value).then(() => showToast('Copied!'))
+}
+
+// ── IndexedDB helpers (same DB as AfroGO app) ──
+function openPoseDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('afrogo_poses', 1)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains('tracks')) {
+        db.createObjectStore('tracks', { keyPath: 'id' })
+      }
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function saveToDB() {
+  if (!outputTA.value) return
+  try {
+    const track = JSON.parse(outputTA.value)
+    const db = await openPoseDB()
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('tracks', 'readwrite')
+      tx.objectStore('tracks').put(track)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+    db.close()
+    showToast('✅ Saved to app DB! Now available in Dance Score panel.')
+  } catch (err) {
+    console.error('Save to DB error:', err)
+    showToast('❌ Save failed: ' + err.message, true)
+  }
+}
+
+// ── Validate a track object ──
+function validateTrack(track) {
+  if (!track || typeof track !== 'object') return 'Not a valid JSON object'
+  if (!track.id || typeof track.id !== 'string') return 'Missing or invalid "id" field'
+  if (!track.title || typeof track.title !== 'string') return 'Missing or invalid "title" field'
+  if (!track.danceStyle || typeof track.danceStyle !== 'string') return 'Missing or invalid "danceStyle" field'
+  if (!Array.isArray(track.frames)) return 'Missing or invalid "frames" array'
+  if (track.frames.length === 0) return 'Track has no frames'
+  const firstFrame = track.frames[0]
+  if (!Array.isArray(firstFrame.landmarks)) return 'Frame missing "landmarks" array'
+  if (firstFrame.landmarks.length < 33) return `Expected 33 landmarks, got ${firstFrame.landmarks.length}`
+  const lm = firstFrame.landmarks[0]
+  if (typeof lm.x !== 'number' || typeof lm.y !== 'number') return 'Landmark missing x/y coordinates'
+  // Fix up missing fields with defaults
+  if (!track.duration_ms) track.duration_ms = track.frames.length > 0 ? track.frames[track.frames.length - 1].timestamp_ms || 0 : 0
+  if (!track.fps) track.fps = 15
+  if (!track.frameCount) track.frameCount = track.frames.length
+  if (!track.createdAt) track.createdAt = Date.now()
+  if (!track.source) track.source = 'imported_from_file'
+  return null // no error
+}
+
+// ── Import JSON file ──
+function handleImportFile(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async function(e) {
+    try {
+      const track = JSON.parse(e.target.result)
+
+      // Validate structure
+      const error = validateTrack(track)
+      if (error) {
+        showToast('❌ Invalid track: ' + error, true)
+        return
+      }
+
+      // Display in textarea
+      outputTA.value = JSON.stringify(track, null, 2)
+      jsonSize.textContent = `${(outputTA.value.length / 1024).toFixed(1)} KB · ${track.frames.length} frames`
+      extractedFrames = track.frames
+
+      // Enable buttons
+      document.getElementById('btn-download').disabled = false
+      document.getElementById('btn-copy').disabled = false
+      document.getElementById('btn-save-db').disabled = false
+      document.getElementById('btn-preview').disabled = false
+
+      setStatus('done')
+      showToast(`✅ Loaded: "${track.title}" — ${track.frameCount || track.frames.length} frames, ${track.danceStyle}`)
+
+      // Auto-save to DB
+      const db = await openPoseDB()
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('tracks', 'readwrite')
+        tx.objectStore('tracks').put(track)
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+      showToast('💾 Also saved to app DB! Ready in Dance Score.')
+
+    } catch (err) {
+      showToast('❌ Failed to parse JSON: ' + err.message, true)
+      console.error(err)
+    }
+  }
+  reader.readAsText(file)
+
+  // Reset file input so the same file can be re-imported
+  event.target.value = ''
+}
+
+// ── Load bundled Amapiano Tutorial track ──
+async function loadBundledTrack() {
+  try {
+    document.getElementById('btn-load-bundled').disabled = true
+    document.getElementById('btn-load-bundled').textContent = '⏳ Loading...'
+
+    const resp = await fetch('amapiano_tutorial_pose.json')
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`)
+
+    const track = await resp.json()
+
+    const error = validateTrack(track)
+    if (error) {
+      showToast('❌ Invalid bundled track: ' + error, true)
+      return
+    }
+
+    // Display in textarea
+    outputTA.value = JSON.stringify(track, null, 2)
+    jsonSize.textContent = `${(outputTA.value.length / 1024).toFixed(1)} KB · ${track.frames.length} frames`
+    extractedFrames = track.frames
+
+    document.getElementById('btn-download').disabled = false
+    document.getElementById('btn-copy').disabled = false
+    document.getElementById('btn-save-db').disabled = false
+    document.getElementById('btn-preview').disabled = false
+
+    setStatus('done')
+
+    // Save to DB
+    const db = await openPoseDB()
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('tracks', 'readwrite')
+      tx.objectStore('tracks').put(track)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+    db.close()
+
+    document.getElementById('btn-load-bundled').textContent = '✅ Loaded!'
+    showToast(`✅ Amapiano Tutorial loaded! ${track.frameCount} frames — ready for Dance Score.`)
+
+  } catch (err) {
+    console.error('Load bundled track error:', err)
+    showToast('❌ Failed to load: ' + err.message, true)
+    document.getElementById('btn-load-bundled').disabled = false
+    document.getElementById('btn-load-bundled').textContent = '🎵 Load Amapiano Tutorial'
+  }
+}
+
+// ── Initialize on load ──
+video.addEventListener('loadedmetadata', () => {
+  document.getElementById('btn-preview').disabled = false
+})
+
+video.addEventListener('click', () => {
+  video.paused ? video.play() : video.pause()
+})
+
+video.load()
+</script>
+</body>
+</html>

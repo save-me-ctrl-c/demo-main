@@ -70,6 +70,26 @@ const zh = {
   voice_listening: '正在聆听...', voice_hint: '试试："播放Amapiano" · "教我Azonto"',
   voice_recommend: '为您推荐',
   language: '语言', lang_switch: 'English',
+
+  // Dance Scoring
+  score_title: 'AI打分', score_subtitle: '实时舞蹈评分',
+  score_start: '开始打分', score_stop: '结束打分',
+  score_select_track: '选择参考动作', score_no_track: '暂无参考动作',
+  score_loading_mp: '加载AI模型...', score_ready: '准备就绪',
+  score_countdown: '倒计时',
+  score_pose_label: '动作分', score_rhythm_label: '节奏分',
+  score_final_label: '综合评分',
+  score_combo_great: '出色！', score_combo_super: '超赞！', score_combo_fire: '燃爆！',
+  score_combo_break: '失误',
+  score_history: '历史记录', score_result_title: '评分结果',
+  score_max_combo: '最高连击', score_energy: '能量',
+  score_retry: '再试一次',
+  score_sample_track: '示例：Azonto手臂舞',
+  score_record_ref: '录制参考动作',
+  score_recording_ref: '录制参考中...',
+  score_no_camera: '无法访问摄像头，请检查权限设置',
+  score_model_failed: 'AI模型加载失败，请检查网络连接',
+  score_no_body: '请确保全身在画面中可见',
 }
 
 const en = {
@@ -142,6 +162,26 @@ const en = {
   voice_listening: 'Listening...', voice_hint: 'Try: "Play Amapiano" · "Teach me Azonto"',
   voice_recommend: 'Recommended for you',
   language: 'Language', lang_switch: '中文',
+
+  // Dance Scoring
+  score_title: 'AI Score', score_subtitle: 'Real-time Scoring',
+  score_start: 'Start Scoring', score_stop: 'Stop',
+  score_select_track: 'Select Reference', score_no_track: 'No reference tracks',
+  score_loading_mp: 'Loading AI model...', score_ready: 'Ready',
+  score_countdown: 'Countdown',
+  score_pose_label: 'Pose', score_rhythm_label: 'Rhythm',
+  score_final_label: 'Final Score',
+  score_combo_great: 'Great!', score_combo_super: 'Super!', score_combo_fire: 'Fire!',
+  score_combo_break: 'Break',
+  score_history: 'History', score_result_title: 'Score Result',
+  score_max_combo: 'Max Combo', score_energy: 'Energy',
+  score_retry: 'Try Again',
+  score_sample_track: 'Sample: Azonto Arm Wave',
+  score_record_ref: 'Record Reference',
+  score_recording_ref: 'Recording reference...',
+  score_no_camera: 'Camera access denied. Please check permissions.',
+  score_model_failed: 'AI model failed to load. Check your connection.',
+  score_no_body: 'Make sure your full body is visible in frame.',
 }
 
 export { zh, en }

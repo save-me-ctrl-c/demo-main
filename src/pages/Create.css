@@ -66,20 +66,22 @@
 .sheet-header { color: var(--color-text); }
 .sheet-body { color: var(--color-text); }
 
-/* === 3 Action Cards === */
-.create-actions { display: flex; gap: 8px; padding: 4px var(--sp-md) var(--sp-sm); }
+/* === 4 Action Cards === */
+.create-actions { display: flex; gap: 6px; padding: 4px var(--sp-md) var(--sp-sm); }
 .create-act {
-  flex: 1; padding: 18px 8px; border-radius: var(--radius-lg);
+  flex: 1; padding: 14px 4px; border-radius: var(--radius-lg);
   background: var(--color-card); border: 1px solid var(--color-border);
   text-align: center; cursor: pointer; display: flex;
-  flex-direction: column; align-items: center; gap: 4px;
+  flex-direction: column; align-items: center; gap: 3px;
   transition: border-color 0.15s ease;
   color: var(--color-text-secondary);
+  min-width: 0;
 }
 .create-act:active { border-color: var(--color-accent); }
-.create-act-icon { margin-bottom: 4px; }
-.create-act-label { font-size: var(--fs-xs); font-weight: 600; }
-.create-act-sub { font-size: 0.6rem; color: var(--color-text-muted); }
+.create-act-icon { margin-bottom: 2px; }
+.create-act-label { font-size: 0.58rem; font-weight: 600; white-space: nowrap; }
+.create-act-sub { font-size: 0.52rem; color: var(--color-text-muted); white-space: nowrap; }
+.create-act-score .create-act-icon { color: var(--color-accent); }
 
 /* === Templates — 2-col grid === */
 .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 var(--sp-md) var(--sp-sm); }

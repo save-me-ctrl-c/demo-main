@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { aiTools, templates } from '../data/mockData'
 import { useT } from '../i18n/LanguageContext'
 import Portal from '../components/Portal'
-import { Camera, Upload, Sparkles, Scissors, Palette, X, Play, Music, Clock } from '../components/Icon'
+import DanceScore from '../components/DanceScore'
+import { Camera, Upload, Sparkles, Scissors, Palette, X, Play, Music, Clock, Gauge } from '../components/Icon'
 import './Create.css'
 
 const TOOL_MAP = {
@@ -20,6 +22,7 @@ const DIGI_PARTNERS = [
 
 function Create() {
   const { t } = useT()
+  const { currentSong, isPlaying } = useOutletContext()
   const [activeDetail, setActiveDetail] = useState(null)
   const [recordState, setRecordState] = useState('idle')
   const [countdown, setCountdown] = useState(3)
@@ -225,6 +228,11 @@ function Create() {
           <span className="create-act-icon"><Sparkles size={28} /></span>
           <span className="create-act-label">{t('create_ai_template')}</span>
           <span className="create-act-sub">{t('create_ai_sub')}</span>
+        </button>
+        <button className="create-act create-act-score" onClick={() => setActiveDetail({ type: 'danceScore' })}>
+          <span className="create-act-icon"><Gauge size={28} /></span>
+          <span className="create-act-label">{t('score_title')}</span>
+          <span className="create-act-sub">{t('score_subtitle')}</span>
         </button>
       </div>
 
@@ -472,6 +480,15 @@ function Create() {
             </div>
           </div>
         </div></Portal>
+      )}
+
+      {/* === Dance Score Panel === */}
+      {activeDetail?.type === 'danceScore' && (
+        <DanceScore
+          onClose={() => setActiveDetail(null)}
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+        />
       )}
 
       {/* === Detail Modal (tool / template info) === */}
