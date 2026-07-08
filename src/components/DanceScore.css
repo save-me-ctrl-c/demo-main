@@ -352,24 +352,22 @@
   border-radius: var(--radius-lg); text-align: center;
   animation: scaleIn 0.3s ease;
 }
-.ds-mode-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
-.ds-mode-sub { font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 20px; }
+.ds-mode-title { font-size: var(--fs-lg); font-weight: 700; margin-bottom: 4px; color: var(--color-text); }
+.ds-mode-sub { font-size: var(--fs-sm); color: var(--color-text-muted); margin-bottom: 20px; }
 .ds-mode-buttons { display: flex; flex-direction: column; gap: 10px; }
 .ds-mode-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 16px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-  background: var(--color-bg); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  background: var(--color-card); cursor: pointer;
   transition: all 0.15s ease; text-align: center;
 }
-.ds-mode-btn.upload:hover { border-color: #1EABBE; background: rgba(30, 171, 190, 0.08); }
-.ds-mode-btn.live:hover { border-color: var(--color-accent); background: rgba(255, 92, 138, 0.08); }
-.ds-mode-icon { font-size: 2rem; }
-.ds-mode-label { font-size: 0.9rem; font-weight: 700; }
-.ds-mode-desc { font-size: 0.65rem; color: var(--color-text-muted); }
+.ds-mode-btn:hover { border-color: var(--color-accent); background: var(--color-accent-glow); }
+.ds-mode-icon { font-size: 28px; }
+.ds-mode-label { font-size: var(--fs-md); font-weight: 600; color: var(--color-text); }
+.ds-mode-desc { font-size: var(--fs-xs); color: var(--color-text-muted); }
 .ds-mode-back {
   margin-top: 14px; background: none; border: none;
-  color: var(--color-text-muted); font-size: 0.7rem; cursor: pointer;
-  text-decoration: underline;
+  color: var(--color-text-muted); font-size: var(--fs-xs); cursor: pointer;
 }
 
 /* ── Upload processing panel ── */

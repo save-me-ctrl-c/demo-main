@@ -1,8 +1,12 @@
 .tab-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
   height: var(--tab-height); padding-bottom: var(--safe-bottom);
-  background: var(--color-bg); display: flex; align-items: center; justify-content: space-around;
+  background: var(--color-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: space-around;
   border-top: 1px solid var(--color-divider);
+  clip-path: inset(0 0 0 0); /* ensure no sub-pixel gap */
 }
 
 /* Parent container — icon + label together, gets the jelly background on active */
