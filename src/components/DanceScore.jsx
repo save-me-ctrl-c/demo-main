@@ -67,15 +67,13 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   const [recElapsed, setRecElapsed] = useState(0)
   const recIntervalRef = useRef(null)
 
-  // ── Initialize: load MediaPipe + camera ──
+  // ── Initialize: load tracks + MediaPipe model only (no camera yet) ──
   useEffect(() => {
-    let stream = null
-
     async function init() {
       // Step 1: Load reference tracks (no camera needed)
       await loadRefTracks().catch(() => {})
 
-      // Step 2: Load MediaPipe Pose model
+      // Step 2: Load MediaPipe Pose model (no camera, just the model)
       try {
         await loadMediaPipe()
         if (!window.Pose) throw new Error('MediaPipe Pose not available')
@@ -86,41 +84,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         return
       }
 
-      // Step 3: Start camera — critical for scoring
-      try {
-        if (videoRef.current) {
-          stream = await startPoseCamera(videoRef.current)
-          streamRef.current = stream
-        }
-      } catch (camErr) {
-        console.error('Camera error:', camErr)
-        const msg = (camErr.message || '')
-        if (msg.includes('CAM_PERMISSION_DENIED')) {
-          setErrorMsg('摄像头权限被拒绝，请在浏览器设置中允许摄像头访问，然后点击下方重试')
-        } else if (msg.includes('CAM_NOT_FOUND')) {
-          setErrorMsg('未检测到摄像头设备，请连接摄像头后重试')
-        } else if (msg.includes('CAM_IN_USE')) {
-          setErrorMsg('摄像头被其他应用占用，请关闭其他使用摄像头的程序后重试')
-        } else if (msg.includes('CAM_HTTPS_REQUIRED')) {
-          setErrorMsg('摄像头需要 HTTPS 或 localhost 环境，请使用 http://localhost 访问')
-        } else {
-          setErrorMsg('无法访问摄像头：' + msg.replace('CAM_ERROR:', ''))
-        }
-        setPanelState('error')
-        return
-      }
-
-      // Step 4: Start idle pose tracker (draws skeleton on camera feed)
-      if (videoRef.current) {
-        const tracker = createPoseTracker(videoRef.current, (landmarks) => {
-          cacheLandmarks(landmarks)
-          drawSkeleton(landmarks)
-        })
-        trackerRef.current = tracker
-        tracker.start()
-      }
-
-      // Step 5: Show track selector — user picks a dance first
+      // Step 3: Show track selector — user picks a dance first
       setPanelState('selecting')
     }
 
@@ -128,7 +92,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
 
     return () => {
       if (trackerRef.current) trackerRef.current.stop()
-      if (stream) stopPoseCamera(stream)
+      if (streamRef.current) stopPoseCamera(streamRef.current)
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
       if (recIntervalRef.current) clearInterval(recIntervalRef.current)
     }
@@ -446,16 +410,55 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     setResults(null)
     setScore(0)
     setComboState(createComboState())
-    setRefTrack(null)
     setScoringMode(null)
-    setPanelState('selecting')
-  }, [])
+    // If live mode was used, stop the tracker (keep camera stream for reuse)
+    if (trackerRef.current && scoringMode === 'live') {
+      trackerRef.current.stop()
+    }
+    setPanelState('modeSelect')
+  }, [scoringMode])
 
   // ── Mode selection handlers ──
-  const handleSelectLive = useCallback(() => {
+  const handleSelectLive = useCallback(async () => {
     setScoringMode('live')
+    setErrorMsg('')
+
+    // Start camera now (lazy — only when user chooses live mode)
+    try {
+      if (videoRef.current && !streamRef.current) {
+        const stream = await startPoseCamera(videoRef.current)
+        streamRef.current = stream
+      }
+    } catch (camErr) {
+      console.error('Camera error:', camErr)
+      const msg = (camErr.message || '')
+      if (msg.includes('CAM_PERMISSION_DENIED')) {
+        setErrorMsg('摄像头权限被拒绝，请在浏览器设置中允许摄像头访问后重试')
+      } else if (msg.includes('CAM_NOT_FOUND')) {
+        setErrorMsg('未检测到摄像头设备')
+      } else if (msg.includes('CAM_IN_USE')) {
+        setErrorMsg('摄像头被其他应用占用')
+      } else if (msg.includes('CAM_HTTPS_REQUIRED')) {
+        setErrorMsg('需要 HTTPS 或 localhost')
+      } else {
+        setErrorMsg('摄像头错误：' + msg.replace('CAM_ERROR:', ''))
+      }
+      return
+    }
+
+    // Start idle pose tracker
+    if (videoRef.current) {
+      if (trackerRef.current) trackerRef.current.stop()
+      const tracker = createPoseTracker(videoRef.current, (landmarks) => {
+        cacheLandmarks(landmarks)
+        drawSkeleton(landmarks)
+      })
+      trackerRef.current = tracker
+      tracker.start()
+    }
+
     setPanelState('idle')
-  }, [])
+  }, [drawSkeleton])
 
   const handleSelectUpload = useCallback(() => {
     setScoringMode('upload')
