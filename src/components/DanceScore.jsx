@@ -452,10 +452,6 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   }, [])
 
   // ── Mode selection handlers ──
-  // Use ref to avoid stale closure on processUploadedVideo
-  const processUploadRef = useRef(processUploadedVideo)
-  processUploadRef.current = processUploadedVideo
-
   const handleSelectLive = useCallback(() => {
     setScoringMode('live')
     setPanelState('idle')
@@ -614,6 +610,10 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
       setPanelState('error')
     }
   }, [refTrack, refShoulderW])
+
+  // Use ref so handleSelectUpload always gets the latest processUploadedVideo
+  const processUploadRef = useRef(processUploadedVideo)
+  processUploadRef.current = processUploadedVideo
 
   // ── Record reference track ──
   const handleStartRecordRef = useCallback(() => {
