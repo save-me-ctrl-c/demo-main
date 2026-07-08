@@ -452,6 +452,10 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   }, [])
 
   // ── Mode selection handlers ──
+  // Use ref to avoid stale closure on processUploadedVideo
+  const processUploadRef = useRef(processUploadedVideo)
+  processUploadRef.current = processUploadedVideo
+
   const handleSelectLive = useCallback(() => {
     setScoringMode('live')
     setPanelState('idle')
@@ -459,20 +463,23 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
 
   const handleSelectUpload = useCallback(() => {
     setScoringMode('upload')
-    // Trigger file picker
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'video/*'
     input.onchange = (e) => {
       const file = e.target.files?.[0]
-      if (file) processUploadedVideo(file)
+      if (file) processUploadRef.current(file)
     }
     input.click()
   }, [])
 
   // ── Process uploaded video frame by frame ──
   const processUploadedVideo = useCallback(async (file) => {
-    if (!refTrack) return
+    if (!refTrack) {
+      setErrorMsg('Please select a dance first')
+      setPanelState('modeSelect')
+      return
+    }
 
     setPanelState('uploading')
     setUploadProgress(0)
@@ -480,16 +487,25 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     setScore(0)
     setResults(null)
 
+    // Create video element (must be in DOM for MediaPipe)
+    const videoEl = document.createElement('video')
+    videoEl.muted = true
+    videoEl.playsInline = true
+    videoEl.crossOrigin = 'anonymous'
+    videoEl.style.position = 'absolute'
+    videoEl.style.opacity = '0'
+    videoEl.style.pointerEvents = 'none'
+    videoEl.style.width = '640px'
+    videoEl.style.height = '480px'
+    document.body.appendChild(videoEl)
+
     try {
-      // Create temp video element
-      const videoEl = document.createElement('video')
-      videoEl.muted = true
-      videoEl.playsInline = true
+      const url = URL.createObjectURL(file)
+      videoEl.src = url
 
       await new Promise((resolve, reject) => {
-        videoEl.src = URL.createObjectURL(file)
         videoEl.onloadedmetadata = resolve
-        videoEl.onerror = reject
+        videoEl.onerror = () => reject(new Error('Failed to load video'))
       })
 
       const videoDuration = videoEl.duration
@@ -500,9 +516,10 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         refTrack.frames.length
       )
 
-      setUploadStatus(`Processing 0/${totalFrames} frames...`)
+      if (totalFrames === 0) throw new Error('Video too short or reference track empty')
 
-      // Create MediaPipe Pose instance
+      setUploadStatus(`Extracting poses... 0/${totalFrames}`)
+
       const Pose = window.Pose
       if (!Pose) throw new Error('MediaPipe not loaded')
 
@@ -517,39 +534,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         minTrackingConfidence: 0.5,
       })
 
-      // Warm up
-      await new Promise((resolve) => {
-        poseInstance.onResults(() => resolve())
-        videoEl.currentTime = 0
-      })
-
-      // Extract landmarks from a single frame
-      const extractLandmarks = (time) => {
-        return new Promise((resolve) => {
-          let resolved = false
-          const handler = (results) => {
-            if (resolved) return; resolved = true
-            poseInstance.onResults(() => {})
-            if (results.poseLandmarks) {
-              resolve(results.poseLandmarks.map(lm => ({
-                x: lm.x, y: lm.y, z: lm.z,
-                visibility: lm.visibility != null ? lm.visibility : 1.0,
-              })))
-            } else {
-              resolve(null)
-            }
-          }
-          poseInstance.onResults(handler)
-          videoEl.currentTime = time
-          const onSeeked = () => {
-            videoEl.removeEventListener('seeked', onSeeked)
-            poseInstance.send({ image: videoEl })
-          }
-          videoEl.addEventListener('seeked', onSeeked)
-        })
-      }
-
-      // Process all frames
+      // Process each frame
       const allFrames = []
       let totalPoseScore = 0
       let validFrames = 0
@@ -559,9 +544,26 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         const seekTime = i * frameInterval
         const timestampMs = Math.round(seekTime * 1000)
 
-        const landmarks = await extractLandmarks(seekTime)
+        // Seek to frame
+        videoEl.currentTime = seekTime
+        await new Promise(r => { videoEl.onseeked = r })
+
+        // Extract landmarks
+        const landmarks = await new Promise((resolve) => {
+          poseInstance.onResults((results) => {
+            if (results.poseLandmarks) {
+              resolve(results.poseLandmarks.map(lm => ({
+                x: lm.x, y: lm.y, z: lm.z,
+                visibility: lm.visibility != null ? lm.visibility : 1.0,
+              })))
+            } else {
+              resolve(null)
+            }
+          })
+          poseInstance.send({ image: videoEl })
+        })
+
         if (landmarks && landmarks.length >= 33) {
-          // Find matching reference frame
           const refFrame = findClosestRefFrame(refTrack.frames, timestampMs)
           if (refFrame) {
             const normalized = normalizeLandmarks(landmarks, refShoulderW)
@@ -576,26 +578,24 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
           }
         }
 
-        // Update progress every 10 frames
-        if (i % 10 === 0 || i === totalFrames - 1) {
+        if (i % 15 === 0 || i === totalFrames - 1) {
           const pct = Math.round(((i + 1) / totalFrames) * 100)
           setUploadProgress(pct)
-          setUploadStatus(`Processing ${i + 1}/${totalFrames} frames (${validFrames} with poses)...`)
+          setUploadStatus(`${i + 1}/${totalFrames} frames (${validFrames} poses)`)
         }
       }
 
       poseInstance.close()
-      URL.revokeObjectURL(videoEl.src)
+      URL.revokeObjectURL(url)
+      document.body.removeChild(videoEl)
 
-      // Compute final scores
       const avgPoseScore = validFrames > 0 ? totalPoseScore / validFrames : 0
-      const rhythmScore = computeRhythmScore(
-        allFrames,
-        refTrack.frames.filter(f => f.timestamp_ms <= allFrames[allFrames.length - 1]?.timestamp_ms || 0)
-      )
+      const rhythmScore = allFrames.length >= 3
+        ? computeRhythmScore(allFrames, refTrack.frames)
+        : 0.3
       const fusion = computeFusionScore(avgPoseScore, rhythmScore)
 
-      const finalResults = {
+      setResults({
         overall: fusion.overall,
         poseScore: Math.round(avgPoseScore * 100),
         rhythmScore: Math.round(rhythmScore * 100),
@@ -604,13 +604,12 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         maxCombo: comboStateLocal.maxCombo,
         comboLevel: comboStateLocal.level,
         durationMs: allFrames.length > 0 ? allFrames[allFrames.length - 1].timestamp_ms : 0,
-      }
-
-      setResults(finalResults)
+      })
       setUploadProgress(100)
       setPanelState('results')
     } catch (err) {
       console.error('Video processing error:', err)
+      if (videoEl.parentNode) document.body.removeChild(videoEl)
       setErrorMsg('视频处理失败：' + (err.message || '未知错误'))
       setPanelState('error')
     }
