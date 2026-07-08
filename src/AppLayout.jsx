@@ -94,7 +94,8 @@ function AppLayout() {
     const audio = audioRef.current
     const url = getSongUrl(song)
     if (!audio || !url) return false
-    if (audio.src !== url) { audio.src = url; audio.load() }
+    const sameTrack = audio.src && (audio.src.endsWith(url) || audio.src === url)
+    if (!sameTrack) { audio.src = url; audio.load() }
     audio.play().catch(e => { console.warn('Play blocked:', e.message); setIsPlaying(false) })
     return true
   }, [])
@@ -119,7 +120,9 @@ function AppLayout() {
       const next = !prev
       const url = getSongUrl(songRef.current)
       if (next && url) {
-        if (audio.src !== url) {
+        // Compare pathnames — audio.src is absolute, url is relative
+        const sameTrack = audio.src && (audio.src.endsWith(url) || audio.src === url)
+        if (!sameTrack) {
           audio.src = url
           audio.load()
         }
@@ -207,6 +210,7 @@ function AppLayout() {
       }
     }, [handlePlaySong, lang]),
     enabled: showOverlay && !voiceActive,
+    isPlaying, // pause wake word detection while music plays (no re-init)
   })
 
   // Voice command handler

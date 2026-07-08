@@ -156,12 +156,14 @@ function fmtErr(e) {
   return e.message || e.error || e.reason || JSON.stringify(e).slice(0, 200)
 }
 
-export default function useWakeWord({ onWake, onSongDetected, enabled = true, lang = 'en-US' } = {}) {
+export default function useWakeWord({ onWake, onSongDetected, enabled = true, isPlaying = false, lang = 'en-US' } = {}) {
   const [status, setStatus] = useState('loading')
   const audioCtxRef = useRef(null)
   const streamRef = useRef(null)
   const cooldownRef = useRef(false)
+  const isPlayingRef = useRef(isPlaying)
   const recognitionRef = useRef(null)
+  isPlayingRef.current = isPlaying
   const log = useCallback((...a) => console.log('%c[WakeWord]','color:#A455FC;font-weight:700',...a), [])
 
   const startWebSpeech = useCallback(() => {
@@ -217,41 +219,10 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
       const createVad = window.createVad
       const hasWasm = M && M._SherpaOnnxCreateCircularBuffer
 
-      let recognizer = null
+      let recognizer = null // ASR disabled — VAD detects, Web Speech recognizes
       if (createVad && hasWasm) {
         try {
-          if (window.__sherpaReady) { log('⏳ 等待 WASM...'); await window.__sherpaReady }
-
-          // Load Moonshine v2 ASR model into MEMFS
-          if (M._SherpaOnnxCreateOfflineRecognizer) {
-            try {
-              const MODEL_DIR = '/sherpa/models/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27/'
-              // Map: source file → MEMFS name (sherpa expects specific names)
-              const fileMap = {
-                'tokens.txt': 'tokens.txt',
-                'decoder_model_merged.ort': 'moonshine-merged-decoder.ort',
-              }
-              for (const [src, dst] of Object.entries(fileMap)) {
-                const resp = await fetch(MODEL_DIR + src)
-                if (resp.ok) {
-                  try { M.FS_createDataFile('/', dst, new Uint8Array(await resp.arrayBuffer()), true, false, false) }
-                  catch(fsErr) { if (!String(fsErr).includes('Errno')) throw fsErr }
-                }
-              }
-              log('📥 ASR 模型已加载到 MEMFS')
-              const asrCfg = {
-                modelConfig: { debug: 0, tokens: './tokens.txt', moonshine: { mergedDecoder: './moonshine-merged-decoder.ort' } }
-              }
-              const ptrCfg = window.initSherpaOnnxOfflineRecognizerConfig(asrCfg, M)
-              const handle = M._SherpaOnnxCreateOfflineRecognizer(ptrCfg.ptr)
-              window.freeConfig?.(ptrCfg, M)
-              if (handle) {
-                recognizer = { handle, M, createStream() { const h = this.M._SherpaOnnxCreateOfflineStream(this.handle); if (!h) return null; return { handle: h, M, acceptWaveform(sr, samples) { const p = this.M._malloc(samples.length * 4); this.M.HEAPF32.set(samples, p / 4); this.M._SherpaOnnxAcceptWaveformOffline(this.handle, sr, p, samples.length); this.M._free(p) }, free() { if (this.handle) { this.M._SherpaOnnxDestroyOfflineStream(this.handle); this.handle = null } } } }, decode(stream) { this.M._SherpaOnnxDecodeOfflineStream(this.handle, stream.handle) }, getResult(stream) { const r = this.M._SherpaOnnxGetOfflineStreamResult(this.handle, stream.handle); const text = r ? this.M.UTF8ToString(r) : ''; this.M._SherpaOnnxDestroyOfflineRecognizerResult(r); return { text } } }
-                log('✅ Sherpa ASR (Moonshine v2) 已就绪')
-              }
-            } catch(e) { log('⚠️ ASR 模型加载失败:', fmtErr(e)) }
-          }
-
+          // VAD detects speech activity → triggers Web Speech API for recognition
           const vad = createVad(M)
           if (vad && vad.handle) {
             const cap = 30 * 16000
@@ -319,12 +290,26 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
               }
             }
 
+            // RMS helper for energy gating
+            const rms = (arr) => { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i] * arr[i]; return Math.sqrt(s / arr.length) }
+            const ENERGY_FLOOR = 0.008 // below this = silence/noise, skip VAD
+
             proc.onaudioprocess = (e) => {
               if (cooldownRef.current) return
               try {
                 const s = new Float32Array(e.inputBuffer.getChannelData(0)); buffer.push(s)
                 while (buffer.size() > vad.config.sileroVad.windowSize) {
-                  const c = buffer.get(buffer.head(), vad.config.sileroVad.windowSize); vad.acceptWaveform(c); buffer.pop(vad.config.sileroVad.windowSize)
+                  const c = buffer.get(buffer.head(), vad.config.sileroVad.windowSize)
+                  const energy = rms(c)
+                  buffer.pop(vad.config.sileroVad.windowSize)
+
+                  // Energy gate: skip VAD processing for low-energy frames
+                  if (energy < ENERGY_FLOOR) {
+                    if (active) { active = false; vad.flush?.() }
+                    continue
+                  }
+
+                  vad.acceptWaveform(c)
                   if (vad.isDetected() && !active) { active = true; speechStarted = false }
                   if (!vad.isDetected() && active) { active = false; vad.flush?.() }
                   if (recognizer) {
@@ -393,13 +378,24 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, la
     recognitionRef.current?.abort()
   }, [])
 
+  // Pause wake word detection while music is playing (no init/stop, just cooldown)
+  useEffect(() => {
+    if (isPlaying) {
+      cooldownRef.current = true
+    } else {
+      cooldownRef.current = false
+    }
+  }, [isPlaying])
+
   useEffect(() => {
     if (enabled) {
-      // When re-enabling, add startup cooldown to prevent
-      // currently playing music from triggering false wake-ups
       cooldownRef.current = true
-      setTimeout(() => { cooldownRef.current = false }, 2000)
+      const t = setTimeout(() => {
+        // Don't clear cooldown if music is still playing
+        if (!isPlayingRef.current) cooldownRef.current = false
+      }, 2000)
       init()
+      return () => clearTimeout(t)
     }
     return () => { stop(); cooldownRef.current = false }
   }, [enabled]) // eslint-disable-line

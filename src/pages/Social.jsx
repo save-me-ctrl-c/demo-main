@@ -53,6 +53,8 @@ function Social() {
   function enterFeed(idx) {
     setFeedIdx(idx)
     setFeedMode(true)
+    // Pause music when entering video feed
+    if (isPlaying) handleTogglePlay()
     // Scroll to the selected video after render
     setTimeout(() => {
       const el = feedRef.current
