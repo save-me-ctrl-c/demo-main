@@ -104,10 +104,10 @@ export function normalizeLandmarks(landmarks, referenceShoulderWidth) {
  *
  * Direction: cosineSimilarity(userBoneVec, refBoneVec)  →  [0, 1]
  * Position:  how close is the bone midpoint to the reference midpoint,
- *            normalized by reference bone length → [0, 1]
+ *            normalized by reference bone length with tolerance → [0, 1]
  *
- * Combined:  0.6 * direction + 0.4 * position
- * Then apply power curve to penalize mediocre matches.
+ * Combined:  0.7 * direction + 0.3 * position
+ * Then apply mild power curve to reward precision.
  */
 function boneScore(userFrom, userTo, refFrom, refTo) {
   const userVec = vec(userFrom, userTo)
@@ -116,20 +116,20 @@ function boneScore(userFrom, userTo, refFrom, refTo) {
   // Direction match
   const dirScore = cosineSimilarity(userVec, refVec)
 
-  // Position match: compare bone midpoints, normalized by ref bone length
+  // Position match: compare bone midpoints, with generous tolerance
   const userMid = { x: (userFrom.x + userTo.x) / 2, y: (userFrom.y + userTo.y) / 2 }
   const refMid = { x: (refFrom.x + refTo.x) / 2, y: (refFrom.y + refTo.y) / 2 }
   const refLen = mag(refVec)
   const posDist = dist(userMid, refMid)
-  // Score decays with distance; 0 distance = 1.0, distance >= refLen = 0
-  const posScore = refLen > 0.001 ? Math.max(0, 1.0 - posDist / refLen) : dirScore
+  // Tolerance = 2x bone length + 0.02 floor (avoids tiny-bone precision issues)
+  const tolerance = refLen * 2.0 + 0.02
+  const posScore = Math.max(0, 1.0 - posDist / tolerance)
 
-  // Combine: direction matters more, position adds precision
-  const raw = 0.6 * dirScore + 0.4 * posScore
+  // Combine: direction is more reliable across different MediaPipe versions
+  const raw = 0.7 * dirScore + 0.3 * posScore
 
-  // Power curve: makes 0.5 → 0.25, 0.7 → 0.49, 0.9 → 0.81
-  // This penalizes "kind of close" and rewards truly precise poses
-  return Math.pow(raw, 1.5)
+  // Mild power curve: rewards precision without over-penalizing
+  return Math.pow(raw, 1.15)
 }
 
 /**
@@ -281,9 +281,9 @@ export function computeFusionScore(poseScore, rhythmScore) {
   const overall = Math.round(raw * 100)
 
   let grade, gradeLabel
-  if (overall >= 85)      { grade = 'perfect'; gradeLabel = '🔥 Perfect' }
-  else if (overall >= 65) { grade = 'great';   gradeLabel = '💃 Great' }
-  else if (overall >= 45) { grade = 'good';    gradeLabel = '🎵 Good' }
+  if (overall >= 80)      { grade = 'perfect'; gradeLabel = '🔥 Perfect' }
+  else if (overall >= 60) { grade = 'great';   gradeLabel = '💃 Great' }
+  else if (overall >= 40) { grade = 'good';    gradeLabel = '🎵 Good' }
   else                    { grade = 'try';     gradeLabel = '👀 Keep Trying' }
 
   return {
