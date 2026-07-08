@@ -234,7 +234,7 @@
       </div>
       <div>
         <label>Track Title</label>
-        <input id="track-title" value="Amapiano Tutorial" placeholder="Track title">
+        <input id="track-title" value="Amapiano" placeholder="Track title">
       </div>
       <div>
         <label>Dance Style</label>
@@ -283,7 +283,7 @@
       📥 Import JSON File
     </button>
     <button class="btn btn-import" id="btn-load-bundled" onclick="loadBundledTrack()">
-      🎵 Load Amapiano Tutorial
+      🎵 Load Amapiano
     </button>
     <span style="font-size:0.7rem; color:#666; margin-left:4px">Load a .json pose track directly into app database</span>
   </div>
@@ -689,7 +689,7 @@ function handleImportFile(event) {
   event.target.value = ''
 }
 
-// ── Load bundled Amapiano Tutorial track ──
+// ── Load bundled Amapiano track ──
 async function loadBundledTrack() {
   try {
     document.getElementById('btn-load-bundled').disabled = true
@@ -729,13 +729,13 @@ async function loadBundledTrack() {
     db.close()
 
     document.getElementById('btn-load-bundled').textContent = '✅ Loaded!'
-    showToast(`✅ Amapiano Tutorial loaded! ${track.frameCount} frames — ready for Dance Score.`)
+    showToast(`✅ Amapiano loaded! ${track.frameCount} frames — ready for Dance Score.`)
 
   } catch (err) {
     console.error('Load bundled track error:', err)
     showToast('❌ Failed to load: ' + err.message, true)
     document.getElementById('btn-load-bundled').disabled = false
-    document.getElementById('btn-load-bundled').textContent = '🎵 Load Amapiano Tutorial'
+    document.getElementById('btn-load-bundled').textContent = '🎵 Load Amapiano'
   }
 }
 

@@ -133,7 +133,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     const BUNDLED = [
       {
         id: 'amapiano_tutorial',
-        title: 'Amapiano Tutorial',
+        title: 'Amapiano',
         danceStyle: 'Amapiano',
         duration_ms: 78000,
         fps: 15,
