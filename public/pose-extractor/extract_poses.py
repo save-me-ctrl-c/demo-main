@@ -8,9 +8,10 @@ and outputs a track JSON file compatible with the AfroGO scoring engine.
 Usage:
     python extract_poses.py [--fps 15] [--title "My Dance"] [--style "Amapiano"]
                             [--output output.json] [--preview] [--start N] [--duration N]
+                            [--extract-audio]
 
 Requirements:
-    pip install mediapipe opencv-python numpy
+    pip install mediapipe opencv-python numpy moviepy
 
 The output JSON format matches the AfroGO dance scoring track structure:
     {
@@ -435,6 +436,11 @@ Examples:
         action="store_true",
         help="Don't write any output file, just print summary",
     )
+    parser.add_argument(
+        "--extract-audio",
+        action="store_true",
+        help="Also extract audio from the video as MP3 (requires moviepy)",
+    )
 
     args = parser.parse_args()
 
@@ -466,6 +472,24 @@ Examples:
             preview=args.preview,
             model_path=args.model,
         )
+
+        # Extract audio if requested
+        if args.extract_audio:
+            try:
+                from moviepy import VideoFileClip
+                audio_path = str(video_path).rsplit('.', 1)[0] + '.mp3'
+                print(f"\n  Extracting audio...")
+                clip = VideoFileClip(str(video_path))
+                if clip.audio:
+                    clip.audio.write_audiofile(audio_path, logger=None)
+                    print(f"  [OK] Audio saved: {audio_path}")
+                else:
+                    print(f"  [!] No audio track found in video")
+                clip.close()
+            except ImportError:
+                print(f"\n  [!] moviepy not installed. Run: pip install moviepy")
+            except Exception as e:
+                print(f"\n  [!] Audio extraction failed: {e}")
 
         # If stdout is piped, print the full JSON
         if not sys.stdout.isatty():
