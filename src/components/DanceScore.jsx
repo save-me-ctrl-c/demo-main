@@ -32,6 +32,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   const streamRef = useRef(null)
   const trackerRef = useRef(null)
   const animFrameRef = useRef(null)
+  const audioRef = useRef(null)
 
   // ── Scoring state ──
   const [score, setScore] = useState(0)
@@ -394,6 +395,12 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         setPanelState('scoring')
         scoreStartRef.current = Date.now()
 
+        // Play audio for bundled tracks that have music
+        if (refTrack?.id === 'amapiano_tutorial' && audioRef.current) {
+          audioRef.current.currentTime = 0
+          audioRef.current.play().catch(() => {})
+        }
+
         // Swap tracker callback to scoring loop
         if (trackerRef.current) trackerRef.current.stop()
         if (videoRef.current) {
@@ -411,6 +418,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
 
   // ── Stop scoring ──
   const handleStopScoring = useCallback(() => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0 }
     if (trackerRef.current) trackerRef.current.stop()
 
     // Swap back to idle tracker
@@ -514,6 +522,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         <div className="ds-camera-wrap">
           <video ref={videoRef} className="ds-cam-feed" autoPlay muted playsInline />
           <canvas ref={canvasRef} className="ds-skeleton-canvas" />
+          <audio ref={audioRef} src="/pose-extractor/amapiano.mp3" preload="auto" />
 
           {/* Loading */}
           {panelState === 'loading' && (
