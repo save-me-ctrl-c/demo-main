@@ -29,7 +29,6 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
         setText(raw)
         setStatus('idle')
         if (!raw || raw.trim().length < 2) return // skip empty/silence
-        console.log('%c[VoiceCmd] %c📝 %s', 'color:#A455FC;font-weight:700', 'color:inherit', `"${raw}"`)
         onResult?.(raw)
       }
       r.onerror = (e) => {
@@ -53,26 +52,14 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
     recognitionRef.current = null
   }, [])
 
-  /* ── Sherpa-ONNX WASM (placeholder — ready for model files) ── */
-  const sherpaRef = useRef(null)
+  /* ── Shared voice mode — same as useWakeWord ── */
+  function getVoiceMode() {
+    try { return localStorage.getItem('afrogo_voice_mode') || 'sherpa' } catch { return 'sherpa' }
+  }
 
-  const initSherpa = useCallback(async () => {
-    /* To enable Sherpa-ONNX:
-       1. Download WASM files from:
-          https://github.com/k2-fsa/sherpa-onnx/releases
-          → sherpa-onnx-wasm-main-asr.{js,wasm,data}
-       2. Place in /public/sherpa/
-       3. Uncomment below:
-    */
-    /*
-    if (sherpaRef.current) return true
-    try {
-      const { createOnlineRecognizer } = await import('sherpa-onnx/wasm')
-      sherpaRef.current = createOnlineRecognizer({ ... })
-      return true
-    } catch { return false }
-    */
-    return false
+  /* ── Sherpa ASR (shared via window.__afrogoAsr from useWakeWord) ── */
+  const sherpaStart = useCallback(() => {
+    return !!window.__afrogoAsr
   }, [])
 
   /* ── Public API ── */
@@ -80,31 +67,43 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
     setStatus('listening')
     setText('')
 
-    // 1. Try Web Speech API first (instant, no download)
-    if (SpeechRecognition) {
-      setBackend('web-speech')
-      const ok = startWebSpeech()
-      if (ok) return
-    } else {
-      console.log('[VoiceRec] No SpeechRecognition — falling back')
-    }
+    const mode = getVoiceMode()
 
-    // 2. Try Sherpa-ONNX WASM (offline, needs model download)
-    const sherpaOk = await initSherpa()
-    if (sherpaOk) {
+    if (mode === 'sherpa') {
+      // Sherpa mode: use shared VAD+ASR engine. Promise-like: one-shot callback.
       setBackend('sherpa')
-      console.log('[VoiceRec] ✅ Sherpa ONNX started')
+      let fired = false
+      window.__afrogoVoiceCallback = (raw) => {
+        if (fired) return
+        fired = true
+        window.__afrogoVoiceCallback = null
+        setText(raw)
+        setStatus('idle')
+        onResult?.(raw)
+      }
+      // Clear VAD buffer to avoid stale audio being processed first
+      window.__afrogoFlushVad?.()
+      console.log('[VoiceRec] Sherpa mode — shared ASR engine active')
       return
     }
 
-    // 3. Fallback: text input mode
-    console.log('[VoiceRec] ⚠️ No voice backend available — using text input mode')
+    // Web Speech mode
+    setBackend('web-speech')
+    window.__afrogoVoiceCallback = null
+    if (SpeechRecognition) {
+      const ok = startWebSpeech()
+      if (ok) return
+    }
+
+    // Fallback
+    console.log('[VoiceRec] No voice backend')
     setBackend('text')
     setStatus('idle')
-  }, [SpeechRecognition, startWebSpeech, initSherpa])
+  }, [SpeechRecognition, startWebSpeech, onResult])
 
   const stopListening = useCallback(() => {
     if (backend === 'web-speech') stopWebSpeech()
+    window.__afrogoVoiceCallback = null
     setStatus('idle')
   }, [backend, stopWebSpeech])
 

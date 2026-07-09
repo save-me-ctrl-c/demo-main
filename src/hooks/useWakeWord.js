@@ -166,6 +166,14 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
   isPlayingRef.current = isPlaying
   const log = useCallback((...a) => console.log('%c[WakeWord]','color:#A455FC;font-weight:700',...a), [])
 
+  // ── Voice mode: 'sherpa' (offline VAD+ASR) or 'webspeech' (energy gate + Web Speech) ──
+  const [voiceMode, setVoiceMode] = useState(() => {
+    try { return localStorage.getItem('afrogo_voice_mode') || 'sherpa' } catch { return 'sherpa' }
+  })
+  const voiceModeRef = useRef(voiceMode)
+  voiceModeRef.current = voiceMode
+  const restartRef = useRef(null) // set later when stop/init are defined
+
   const startWebSpeech = useCallback(() => {
     if (!SpeechRecognition || recognitionRef.current) return
     try {
@@ -219,14 +227,55 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
       const createVad = window.createVad
       const hasWasm = M && M._SherpaOnnxCreateCircularBuffer
 
-      let recognizer = null // ASR disabled — VAD detects, Web Speech recognizes
+      let recognizer = null
       if (createVad && hasWasm) {
         try {
-          // VAD detects speech activity → triggers Web Speech API for recognition
+          // ── Load ASR model (Moonshine v2) into MEMFS ──
+          const hasAsrApi = !!M._SherpaOnnxCreateOfflineRecognizer
+          const hasOfflineRec = typeof OfflineRecognizer !== 'undefined'
+          log('🔍 ASR 检测:', `mode=${voiceModeRef.current} WASM=${hasWasm} VAD=${!!createVad} ASR_API=${hasAsrApi} OfflineRec=${hasOfflineRec}`)
+          if (voiceModeRef.current === 'sherpa' && hasAsrApi && hasOfflineRec) {
+            try {
+              const MODEL_DIR = '/sherpa/models/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27/'
+              const files = [
+                ['tokens.txt', 'tokens.txt'],
+                ['encoder_model.ort', 'moonshine-encoder.ort'],
+                ['decoder_model_merged.ort', 'moonshine-merged-decoder.ort'],
+              ]
+              for (const [src, dst] of files) {
+                const resp = await fetch(MODEL_DIR + src)
+                if (resp.ok) {
+                  try {
+                    // Remove existing file first (errno 20 = file exists)
+                    try { M.FS_unlink('/' + dst) } catch {}
+                    M.FS_createDataFile('/', dst, new Uint8Array(await resp.arrayBuffer()), true, false, false)
+                  } catch (fsErr) { if (!String(fsErr).includes('Errno')) throw fsErr }
+                }
+              }
+              const asrConfig = {
+                modelConfig: {
+                  debug: 0,
+                  tokens: './tokens.txt',
+                  moonshine: { encoder: './moonshine-encoder.ort', mergedDecoder: './moonshine-merged-decoder.ort' },
+                },
+              }
+              recognizer = new OfflineRecognizer(asrConfig, M)
+              window.__afrogoAsr = recognizer // shared ref for useVoiceRecognition
+              log('✅ Sherpa ASR (Moonshine v2) 已就绪')
+            } catch (e) { log('⚠️ ASR 模型加载失败，使用 Web Speech 降级:', fmtErr(e)) }
+          }
+
+          // ── Create VAD ──
           const vad = createVad(M)
           if (vad && vad.handle) {
             const cap = 30 * 16000
             const buffer = { handle: M._SherpaOnnxCreateCircularBuffer(cap), M, push(s) { const p = this.M._malloc(s.length * 4); this.M.HEAPF32.set(s, p / 4); this.M._SherpaOnnxCircularBufferPush(this.handle, p, s.length); this.M._free(p) }, get(start, n) { const p = this.M._SherpaOnnxCircularBufferGet(this.handle, start, n); const o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = this.M.HEAPF32[p / 4 + i]; this.M._SherpaOnnxCircularBufferFree(p); return o }, pop(n) { this.M._SherpaOnnxCircularBufferPop(this.handle, n) }, size() { return this.M._SherpaOnnxCircularBufferSize(this.handle) }, head() { return this.M._SherpaOnnxCircularBufferHead(this.handle) }, reset() { this.M._SherpaOnnxCircularBufferReset(this.handle) } }
+            // Expose global flush for VoiceButton (safe: drain + reset VAD, skip buffer reset)
+            window.__afrogoFlushVad = () => {
+              vad?.flush?.()
+              vad?.reset?.()
+              while (buffer.size() > 0) buffer.pop(buffer.size())
+            }
             const proc = ctx.createScriptProcessor(4096, 1, 1); let active = false
             let speechStarted = false
 
@@ -237,6 +286,18 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
             const ASR_BACKOFF_MAX = 8000  // max backoff when getting empty results
 
             const processText = (text) => {
+              // If VoiceButton is active in Sherpa mode, route text to it
+              if (window.__afrogoVoiceCallback) {
+                // Set cooldown FIRST (synchronous) before callback fires
+                cooldownRef.current = true
+                const cb = window.__afrogoVoiceCallback
+                window.__afrogoVoiceCallback = null
+                speechStarted = false
+                vad?.flush?.(); vad?.reset?.()
+                cb(text)
+                setTimeout(() => { cooldownRef.current = false; buffer?.reset() }, 5000)
+                return
+              }
               // Short utterances: "hi", "hey" etc — fuzzy-match tiny wake words
               const clean = text.toLowerCase().replace(/[^a-z0-9一-鿿]/g, '')
               if (clean.length <= 4) {
@@ -320,7 +381,7 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
 
                     while (!vad.isEmpty()) {
                       const seg = vad.front(); vad.pop()
-                      if (seg.samples.length < 8000) continue
+                      if (seg.samples.length < 3000) continue // min 0.18s — was 8000 (0.5s), too strict
                       try {
                         lastAsrTime = now
                         const st = recognizer.createStream()
@@ -347,7 +408,11 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
                 }
               } catch(e) {}
             }
-            source.connect(proc); proc.connect(ctx.destination)
+            const silenceGain = ctx.createGain()
+            silenceGain.gain.value = 0
+            source.connect(proc)
+            proc.connect(silenceGain)
+            silenceGain.connect(ctx.destination)
             log('✅ Sherpa VAD 已就绪'); setStatus('idle'); return
           }
         } catch(e) { log('⚠️ Sherpa VAD 初始化失败，回退能量门控:', fmtErr(e)) }
@@ -376,7 +441,32 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
     streamRef.current?.getTracks().forEach(t => t.stop())
     audioCtxRef.current?.close()
     recognitionRef.current?.abort()
+    window.__afrogoAsr = null
   }, [])
+
+  // ── Voice mode switch (after stop/init defined) ──
+  const switchVoiceMode = useCallback((mode) => {
+    setVoiceMode(mode)
+    try { localStorage.setItem('afrogo_voice_mode', mode) } catch {}
+    log(`🎤 语音方案已切换: ${mode === 'sherpa' ? 'Sherpa VAD+ASR (离线)' : 'Web Speech (在线)'}`)
+    stop()
+    setTimeout(() => { if (enabled) init() }, 200)
+  }, [log, stop, enabled, init])
+
+  // Expose console command
+  useEffect(() => {
+    window.afrogoVoice = (mode) => {
+      if (mode === 'sherpa' || mode === 'webspeech') {
+        switchVoiceMode(mode)
+      } else {
+        console.log('%c[AfroGo] %c用法: afrogoVoice("sherpa") 或 afrogoVoice("webspeech")',
+          'color:#A455FC;font-weight:700', 'color:inherit')
+        console.log('%c[AfroGo] %c当前:', 'color:#A455FC;font-weight:700', 'color:inherit',
+          voiceModeRef.current === 'sherpa' ? 'Sherpa VAD+ASR (离线)' : 'Web Speech (在线)')
+      }
+    }
+    return () => { delete window.afrogoVoice }
+  }, [switchVoiceMode])
 
   // Pause wake word detection while music is playing (no init/stop, just cooldown)
   useEffect(() => {
@@ -391,9 +481,8 @@ export default function useWakeWord({ onWake, onSongDetected, enabled = true, is
     if (enabled) {
       cooldownRef.current = true
       const t = setTimeout(() => {
-        // Don't clear cooldown if music is still playing
         if (!isPlayingRef.current) cooldownRef.current = false
-      }, 2000)
+      }, 500) // just enough for AudioContext init
       init()
       return () => clearTimeout(t)
     }

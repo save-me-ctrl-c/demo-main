@@ -4,7 +4,7 @@ import TabBar from './components/TabBar'
 import MusicPlayer from './components/MusicPlayer'
 import VoiceButton from './components/VoiceButton'
 import useWakeWord from './hooks/useWakeWord'
-import { parseIntent, findSongs, getFeedback, speak } from './services/voiceAssistant'
+import { parseIntent, findSongs } from './services/voiceAssistant'
 import { useT } from './i18n/LanguageContext'
 import { songs } from './data/mockData'
 import './AppLayout.css'
@@ -206,10 +206,9 @@ function AppLayout() {
         setWakeRecommend(song.title)
         setWakeTrigger(c => c + 1)
         handlePlaySong(song, [song])
-        speak(getFeedback('play', song, lang))
       }
-    }, [handlePlaySong, lang]),
-    enabled: showOverlay && !voiceActive,
+    }, [handlePlaySong]),
+    enabled: showOverlay,
     isPlaying, // pause wake word detection while music plays (no re-init)
   })
 
@@ -225,14 +224,11 @@ function AppLayout() {
       (s.aliases && s.aliases.some(a => a.toLowerCase() === rawLower))
     )
     if (directMatch) {
-      console.log('[VoiceCmd] ⚡ direct match:', directMatch.title)
       handlePlaySong(directMatch, [directMatch])
-      speak(getFeedback('play', directMatch, lang))
       return
     }
 
     const intent = parseIntent(raw)
-    console.log('[VoiceCmd]', intent)
 
     switch (intent.action) {
       case 'play': {
@@ -242,25 +238,20 @@ function AppLayout() {
         })
         if (results.length > 0) {
           handlePlaySong(results[0], results)
-          speak(getFeedback('play', results[0], lang))
         } else {
           const randomSongs = findSongs('')
           handlePlaySong(randomSongs[0], randomSongs)
-          speak(getFeedback('notFound', null, lang))
         }
         break
       }
       case 'pause':
         if (isPlaying) handleTogglePlay()
-        speak(getFeedback('pause', null, lang))
         break
       case 'resume':
         if (!isPlaying) handleTogglePlay()
-        speak(getFeedback('resume', null, lang))
         break
       case 'next':
         handleNext()
-        speak(getFeedback('next', null, lang))
         break
       case 'prev':
         handlePrev()
@@ -268,7 +259,6 @@ function AppLayout() {
       case 'random': {
         const shuffled = findSongs('')
         handlePlaySong(shuffled[0], shuffled)
-        speak(getFeedback('random', null, lang))
         break
       }
       case 'volumeUp':
@@ -283,14 +273,11 @@ function AppLayout() {
         }
         break
       case 'whatPlaying':
-        if (currentSong) speak(`Playing ${currentSong.title} by ${currentSong.artist}`)
         break
       case 'greet':
-        // Friendly greeting — LLM provides a contextual response
-        speak(intent.params?.response || (lang === 'zh' ? '嘿！想听点什么？' : 'Hey! What would you like to listen to?'))
+        // Visual-only response — no TTS to avoid mic feedback
         break
       case 'stop':
-        speak(getFeedback('stop', null, lang))
         // VoiceButton deactivation is handled internally via onDeactivate callback
         break
     }

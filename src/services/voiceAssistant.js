@@ -42,7 +42,7 @@ const GARBLED_WAKE = [
 
 // Greeting patterns — don't turn casual hellos into song searches
 const GREET_PATTERNS = [
-  /^(hi|hey|hello|yo|hai|hay|hoi|hola|sup|howdy)(\s|$)/i,
+  /^(hi|hey|hello|yo|hai|hay|hoi|hola|sup|howdy)(\s|[,.!?]|$)/i,
   /^(good\s(morning|afternoon|evening))/i,
   /^(what'?s\sup|how('?s| are) (it|you|things)(\sgoing)?)/i,
   /^(are\syou\s)?(there|awake|listening)/i,
