@@ -15,6 +15,8 @@ import {
   Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe, CreditCard, Shield, Info,
   // Voice
   Mic, MicOff,
+  // People
+  Users, Star,
 } from 'lucide-react'
 
 /* Map icon name → Lucide component */
@@ -59,4 +61,5 @@ export {
   Download, BookOpen, Crown, Music, FolderOpen, Clock, ListMusic,
   Settings, LogOut, HelpCircle, UserCog, ShoppingBag, Wifi, Smartphone, Globe, CreditCard, Shield, Info,
   Mic, MicOff,
+  Users, Star,
 }

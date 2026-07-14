@@ -14,14 +14,14 @@ function setSkipUntil(ts) { try { localStorage.setItem(SKIP_KEY, String(ts)) } c
 // AI Digital Human Mentors — each with authentic Afro dance background
 const DIGITAL_HUMANS = [
   {
-    name: 'Zara', style: 'Afrobeat Queen', emoji: '💃', color: '#FF6B35',
+    name: 'Zuri', style: 'Afrobeat Queen', emoji: '💃', color: '#FF6B35',
     tags: ['Shaku Shaku', 'Gwara Gwara', 'Zanku'],
     level: 'All Levels',
     experience: '12+ years',
     students: '18.5K',
     region: 'Accra, Ghana',
-    bio: 'Zara 来自加纳阿克拉，是非洲节奏女王。她 15 岁开始在街头学习传统加纳舞蹈，后融合尼日利亚 Afrobeat 创造出独树一帜的风格。她相信舞蹈是连接灵魂与土地的桥梁。',
-    bioEn: 'Zara hails from Accra, Ghana — the Afrobeat Queen. She started dancing at 15 on the streets of Jamestown, later fusing traditional Ghanaian moves with Nigerian Afrobeat. Her mission: connect soul to soil through rhythm.',
+    bio: 'Zuri 来自加纳阿克拉，是非洲节奏女王。她 15 岁开始在街头学习传统加纳舞蹈，后融合尼日利亚 Afrobeat 创造出独树一帜的风格。她相信舞蹈是连接灵魂与土地的桥梁。',
+    bioEn: 'Zuri hails from Accra, Ghana — the Afrobeat Queen. She started dancing at 15 on the streets of Jamestown, later fusing traditional Ghanaian moves with Nigerian Afrobeat. Her mission: connect soul to soil through rhythm.',
     specialties: ['Afrobeat 编舞', '传统加纳舞步', 'Shaku Shaku 进阶', '舞台表演编排'],
     quote: '"Every beat carries a story. Let your body tell it."',
   },
@@ -95,7 +95,7 @@ function GuestHome() {
   const [showModal, setShowModal] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
   const [mentorModal, setMentorModal] = useState(null)
-  const [dlCheck, setDlCheck] = useState({ zara: true, tunde: false, ai: false })
+  const [dlCheck, setDlCheck] = useState({ zuri: true, tunde: false, ai: false })
   const [downloadedPacks, setDownloadedPacks] = useState(new Set())
 
   // Auto-redirect if skip is active
@@ -115,7 +115,7 @@ function GuestHome() {
 
   const handleDownloadAll = async () => {
     const items = []
-    if (dlCheck.zara && !downloadedPacks.has('Zara')) items.push({ name: 'Zara', mentor: DIGITAL_HUMANS[0] })
+    if (dlCheck.zuri && !downloadedPacks.has('Zuri')) items.push({ name: 'Zuri', mentor: DIGITAL_HUMANS[0] })
     if (dlCheck.tunde && !downloadedPacks.has('Tunde')) items.push({ name: 'Tunde', mentor: DIGITAL_HUMANS[4] })
     if (dlCheck.ai && !downloadedPacks.has('AI')) items.push({ name: 'AI', mentor: null })
     if (items.length === 0) return
@@ -281,7 +281,11 @@ function GuestHome() {
           {DIGITAL_HUMANS.slice(0, 4).map((m, i) => (
             <div key={m.name} className="guest-mentor-card" style={{ '--delay': `${i * 0.08}s` }}
               onClick={() => setMentorModal(m)}>
-              <div className="guest-mentor-avatar" style={{ background: m.color }}>{m.emoji}</div>
+              <div className="guest-mentor-avatar" style={{ background: m.color }}>
+                <img className="guest-mentor-avatar-img" src={`/media/avatars/mentors/avatar-mentor-${m.name.toLowerCase()}.png`} alt={m.name}
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                <span className="guest-mentor-emoji" style={{ display: 'none' }}>{m.emoji}</span>
+              </div>
               <div className="guest-mentor-name">{m.name}</div>
               <div className="guest-mentor-style">{m.style}</div>
               {isGuest && <div className="guest-mentor-lock">🔒</div>}
@@ -337,10 +341,10 @@ function GuestHome() {
             <div className="guest-preview-grid">
               {[DIGITAL_HUMANS[0], DIGITAL_HUMANS[4]].map(dh => (
                 <div key={dh.name} className="guest-preview-card"
-                  style={{ borderColor: dlCheck[dh.name === 'Zara' ? 'zara' : 'tunde'] ? dh.color : 'transparent' }}
-                  onClick={() => setDlCheck(c => ({ ...c, [dh.name === 'Zara' ? 'zara' : 'tunde']: !c[dh.name === 'Zara' ? 'zara' : 'tunde'] }))}>
+                  style={{ borderColor: dlCheck[dh.name === 'Zuri' ? 'zuri' : 'tunde'] ? dh.color : 'transparent' }}
+                  onClick={() => setDlCheck(c => ({ ...c, [dh.name === 'Zuri' ? 'zuri' : 'tunde']: !c[dh.name === 'Zuri' ? 'zuri' : 'tunde'] }))}>
                   <div className="guest-preview-thumb" style={{
-                    backgroundImage: `url(/media/digiMan/${dh.name === 'Zara' ? 'woman' : 'man'}_thumb.jpg)`,
+                    backgroundImage: `url(/media/digiMan/${dh.name === 'Zuri' ? 'woman' : 'man'}_thumb.jpg)`,
                     backgroundSize: 'cover', backgroundPosition: 'center'
                   }}>
                     <span className="guest-preview-play">▶</span>
@@ -350,23 +354,23 @@ function GuestHome() {
                     <span className="guest-preview-name">{dh.name} · {dh.style.split(' ')[0]}</span>
                     <span className="guest-preview-meta">1080p · ~120 MB</span>
                   </div>
-                  {dlCheck[dh.name === 'Zara' ? 'zara' : 'tunde'] && <span className="guest-preview-check">✓</span>}
+                  {dlCheck[dh.name === 'Zuri' ? 'zuri' : 'tunde'] && <span className="guest-preview-check">✓</span>}
                 </div>
               ))}
             </div>
 
             {/* Checkboxes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              {/* Zara */}
+              {/* Zuri */}
               <label className="guest-check-row" style={{ borderLeftColor: DIGITAL_HUMANS[0].color }}>
-                <input type="checkbox" checked={dlCheck.zara} onChange={() => setDlCheck(c => ({ ...c, zara: !c.zara }))}
-                  disabled={downloadedPacks.has('Zara')} />
+                <input type="checkbox" checked={dlCheck.zuri} onChange={() => setDlCheck(c => ({ ...c, zuri: !c.zuri }))}
+                  disabled={downloadedPacks.has('Zuri')} />
                 <span className="guest-check-emoji">💃</span>
                 <div className="guest-check-info">
-                  <div className="guest-check-name">Zara · Afrobeat {lang === 'zh' ? '领舞视频' : 'Dance Video'}</div>
+                  <div className="guest-check-name">Zuri · Afrobeat {lang === 'zh' ? '领舞视频' : 'Dance Video'}</div>
                   <div className="guest-check-meta">{lang === 'zh' ? '含 Shaku Shaku、Gwara Gwara 等经典动作' : 'Shaku Shaku, Gwara Gwara & more'} · ~120 MB</div>
                 </div>
-                {downloadedPacks.has('Zara') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
+                {downloadedPacks.has('Zuri') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
               </label>
               {/* Tunde */}
               <label className="guest-check-row" style={{ borderLeftColor: DIGITAL_HUMANS[4].color }}>
@@ -394,9 +398,9 @@ function GuestHome() {
 
             {/* Summary */}
             {(() => {
-              const selectedCount = (dlCheck.zara ? 1 : 0) + (dlCheck.tunde ? 1 : 0) + (dlCheck.ai ? 1 : 0)
-              const newCount = selectedCount - [...downloadedPacks].filter(k => (k === 'Zara' && dlCheck.zara) || (k === 'Tunde' && dlCheck.tunde) || (k === 'AI' && dlCheck.ai)).length
-              const totalSize = (dlCheck.zara && !downloadedPacks.has('Zara') ? 120 : 0)
+              const selectedCount = (dlCheck.zuri ? 1 : 0) + (dlCheck.tunde ? 1 : 0) + (dlCheck.ai ? 1 : 0)
+              const newCount = selectedCount - [...downloadedPacks].filter(k => (k === 'Zuri' && dlCheck.zuri) || (k === 'Tunde' && dlCheck.tunde) || (k === 'AI' && dlCheck.ai)).length
+              const totalSize = (dlCheck.zuri && !downloadedPacks.has('Zuri') ? 120 : 0)
                 + (dlCheck.tunde && !downloadedPacks.has('Tunde') ? 120 : 0)
                 + (dlCheck.ai && !downloadedPacks.has('AI') ? 45 : 0)
               return (
@@ -412,7 +416,7 @@ function GuestHome() {
 
             {/* Download button */}
             <button className="guest-dl-all-btn"
-              disabled={!dlCheck.zara && !dlCheck.tunde && !dlCheck.ai}
+              disabled={!dlCheck.zuri && !dlCheck.tunde && !dlCheck.ai}
               onClick={() => handleDownloadAll()}>
               <Download size={16} />
               {lang === 'zh' ? '一键下载' : 'Download Selected'}
@@ -480,7 +484,10 @@ function GuestHome() {
             <div className="gwc-items">
               {DIGITAL_HUMANS.filter(d => downloadedPacks.has(d.name)).map(d => (
                 <div key={d.name} className="gwc-item">
-                  <span className="gwc-item-icon" style={{ background: d.color }}>{d.emoji}</span>
+                  <span className="gwc-item-icon" style={{ background: d.color }}>
+                    <img className="gwc-item-icon-img" src={`/media/avatars/mentors/avatar-mentor-${d.name.toLowerCase()}.png`} alt={d.name}
+                      onError={(e) => { e.target.style.display = 'none' }} />
+                  </span>
                   <span className="gwc-item-name">{d.name} {lang === 'zh' ? '已就绪' : 'Ready'}</span>
                 </div>
               ))}
@@ -511,7 +518,9 @@ function GuestHome() {
 
             {/* Avatar */}
             <div className="gmd-avatar" style={{ background: mentorModal.color }}>
-              <span>{mentorModal.emoji}</span>
+              <img className="gmd-avatar-img" src={`/media/avatars/mentors/avatar-mentor-${mentorModal.name.toLowerCase()}.png`} alt={mentorModal.name}
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+              <span className="gmd-avatar-emoji" style={{ display: 'none' }}>{mentorModal.emoji}</span>
             </div>
 
             {/* Name & Title */}

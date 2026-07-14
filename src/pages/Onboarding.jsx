@@ -74,7 +74,11 @@ function Onboarding() {
             {mentors.map(m => (
               <button key={m.id} className="mentor-card" onClick={() => handleSelectMentor(m)}
                 style={{ '--mc': m.color }}>
-                <span className="mentor-avatar">{m.avatar}</span>
+                <span className="mentor-avatar">
+                  <img className="mentor-avatar-img-ob" src={`/media/avatars/mentors/avatar-mentor-${m.name.toLowerCase()}.png`} alt={m.name}
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                  <span className="mentor-avatar-fallback" style={{ display: 'none' }}>{m.avatar}</span>
+                </span>
                 <div className="mentor-info">
                   <h3>{m.name}</h3>
                   <span className="mentor-specialty">{m.specialty}</span>
@@ -105,7 +109,9 @@ function Onboarding() {
           <button className="onboard-back" onClick={() => setStep(1)}>← Back</button>
           <span className="onboard-step">Step 2/2</span>
           <div className="onboard-mentor-badge" style={{ '--mc': selectedMentor?.color }}>
-            <span>{selectedMentor?.avatar}</span>
+            <img className="ob-badge-img" src={`/media/avatars/mentors/avatar-mentor-${selectedMentor?.name?.toLowerCase()}.png`} alt={selectedMentor?.name}
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline' }} />
+            <span className="ob-badge-fallback" style={{ display: 'none' }}>{selectedMentor?.avatar}</span>
             <span>{selectedMentor?.name}</span>
           </div>
           <h1>Download Dance Resources</h1>

@@ -125,3 +125,145 @@
 .song-title { font-size: var(--fs-sm); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-artist { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .song-dur { font-size: var(--fs-xs); color: var(--color-text-muted); flex-shrink: 0; }
+
+/* === Compact Song Row (Offline simplified) === */
+.song-row.compact { gap: 10px; padding: 9px 0; }
+.song-row.compact .song-title { font-size: var(--fs-xs); }
+.song-compact-icon {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; flex-shrink: 0;
+}
+
+/* === Mentor / AI Instructor Cards (afrogo.html modal-card style) === */
+.mentor-count { font-size: var(--fs-xs); color: var(--color-text-muted); }
+.mentor-grid {
+  display: flex; flex-direction: column; gap: var(--sp-sm);
+  padding: 0 var(--sp-md); padding-bottom: var(--sp-md);
+}
+.mentor-card {
+  background: var(--color-card); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg); overflow: hidden;
+  transition: all 0.2s ease;
+}
+.mentor-card.expanded {
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+}
+
+/* Mentor header — always visible */
+.mentor-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mentor-header:active { opacity: 0.7; }
+.mentor-avatar-wrap {
+  position: relative; flex-shrink: 0;
+}
+.mentor-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+}
+.mentor-avatar-emoji { font-size: 1.6rem; }
+.mentor-avatar-img {
+  width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; display: block;
+}
+.mentor-students-badge {
+  position: absolute; bottom: -2px; right: -4px;
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--color-bg); color: var(--color-text-muted);
+  font-size: 0.55rem; font-weight: 700; padding: 1px 5px;
+  border-radius: var(--radius-full); border: 1px solid var(--color-divider);
+  white-space: nowrap;
+}
+.mentor-header-info { flex: 1; min-width: 0; }
+.mentor-name { font-size: var(--fs-md); font-weight: 700; line-height: 1.1; }
+.mentor-specialty {
+  font-size: var(--fs-xs); color: var(--color-accent);
+  font-weight: 600; display: block; margin-top: 1px;
+}
+.mentor-meta-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 4px;
+  flex-wrap: wrap;
+}
+.mentor-level {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  padding: 2px 7px; border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.06); color: var(--color-text-secondary);
+}
+.mentor-highlight {
+  font-size: 0.6rem; color: var(--color-text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mentor-expand-icon {
+  font-size: 0.8rem; color: var(--color-text-muted);
+  transition: transform 0.25s ease; flex-shrink: 0;
+}
+.mentor-expand-icon.open { transform: rotate(180deg); }
+
+/* Mentor detail — expanded section */
+.mentor-detail {
+  padding: 0 16px 16px;
+  animation: fadeInUp 0.25s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mentor-bio {
+  font-size: var(--fs-xs); color: var(--color-text-secondary);
+  line-height: 1.65; margin: 0 0 10px;
+}
+
+/* Dance style tags */
+.mentor-styles {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.mentor-style-tag {
+  font-size: 0.6rem; font-weight: 600; padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(124, 58, 237, 0.1); color: var(--color-accent);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+/* Teaching packs */
+.mentor-packs { margin-bottom: 8px; }
+.mentor-playlists { padding-top: 4px; }
+.packs-title {
+  font-size: var(--fs-xs); font-weight: 700; margin: 0 0 8px;
+  color: var(--color-text);
+}
+.pack-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.02); border: 1px solid var(--color-divider);
+  margin-bottom: 6px; transition: background 0.15s ease;
+}
+.pack-item:active { background: rgba(255,255,255,0.04); }
+.pack-icon {
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.pack-info { flex: 1; min-width: 0; }
+.pack-name { font-size: var(--fs-xs); font-weight: 600; display: block; }
+.pack-desc {
+  font-size: 0.6rem; color: var(--color-text-dim);
+  display: block; margin-top: 1px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.pack-meta {
+  display: flex; gap: 10px; margin-top: 4px;
+  font-size: 0.55rem; color: var(--color-text-muted);
+}
+.pack-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.pack-dl-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: var(--color-accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease;
+}
+.pack-dl-btn:active { transform: scale(0.9); }

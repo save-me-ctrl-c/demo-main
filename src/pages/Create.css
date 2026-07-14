@@ -99,6 +99,10 @@
   position: absolute; inset: 0;
   background: linear-gradient(145deg, #1e1e2c 0%, #181820 100%);
 }
+.template-thumb-img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0;
+}
 .template-thumb-icon { font-size: 2rem; position: relative; z-index: 1; }
 .template-play {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -225,9 +229,13 @@
   border: 2px solid rgba(255,255,255,.2);
   background: rgba(0,0,0,.5); font-size: 18px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: border-color .2s;
+  transition: border-color .2s; overflow: hidden; padding: 0;
 }
 .panel-dh-switch-btn.active { border-color: var(--color-accent); }
+.panel-dh-switch-img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+.panel-dh-switch-emoji { font-size: 18px; }
 
 .panel-rec-view {
   flex: 1 1 auto; min-height: 0; max-height: 30dvh;
@@ -327,7 +335,12 @@
   border-radius: var(--radius-md); cursor: pointer;
 }
 .ait-card:active { border-color: var(--color-accent); }
-.ait-visual { font-size: 1.8rem; }
+.ait-visual { font-size: 1.8rem; overflow: hidden; position: relative; }
+.ait-visual-img {
+  width: 100%; height: 100%; object-fit: cover;
+  position: absolute; inset: 0;
+}
+.ait-visual-emoji { display: flex; align-items: center; justify-content: center; }
 .ait-name { font-size: var(--fs-xs); font-weight: 600; text-align: center; }
 .ait-diff { font-size: 0.58rem; color: var(--color-text-dim); }
 
@@ -354,7 +367,10 @@
 }
 .modal-hero {
   width: 100%; height: 160px; display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0; overflow: hidden;
+}
+.modal-hero-img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .modal-hero-icon { font-size: 3rem; }
 .modal-title { font-size: var(--fs-lg); font-weight: 700; padding: 20px 20px 0; }

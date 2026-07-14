@@ -242,8 +242,9 @@ function Create() {
         {templates.map((tp, i) => (
           <div key={i} className="template-card" onClick={() => setActiveDetail({ type: 'template', ...tp })}>
             <div className="template-thumb">
-              <div className="template-thumb-bg" />
-              <span className="template-thumb-icon">{tp.icon}</span>
+              <img className="template-thumb-img" src={tp.image} alt={tp.name}
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+              <span className="template-thumb-icon" style={{ display: 'none' }}>{tp.icon}</span>
               <div className="template-play"><Play size={28} /></div>
             </div>
             <div className="template-info">
@@ -330,13 +331,18 @@ function Create() {
               )}
               {/* Mentor switcher */}
               <div className="panel-dh-switch">
-                {DIGI_PARTNERS.map(d => (
+                {DIGI_PARTNERS.map(d => {
+                  const imgName = d.name === 'Zara' ? 'zuri' : d.name.toLowerCase()
+                  return (
                   <button key={d.name}
                     className={`panel-dh-switch-btn ${digiPartner.name === d.name ? 'active' : ''}`}
                     onClick={() => { setDigiPartner(d); if (digiVideoRef.current) digiVideoRef.current.currentTime = 0 }}>
-                    {d.emoji}
+                    <img className="panel-dh-switch-img" src={`/media/avatars/mentors/avatar-mentor-${imgName}.png`} alt={d.name}
+                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline' }} />
+                    <span className="panel-dh-switch-emoji" style={{ display: 'none' }}>{d.emoji}</span>
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -471,7 +477,11 @@ function Create() {
               <div className="ait-grid">
                 {templates.map((tp, i) => (
                   <div key={i} className="ait-card" onClick={() => setActiveDetail({ type: 'template', ...tp })}>
-                    <div className="ait-visual"><span>{tp.icon}</span></div>
+                    <div className="ait-visual">
+                      <img className="ait-visual-img" src={tp.image} alt={tp.name}
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                      <span className="ait-visual-emoji" style={{ display: 'none' }}>{tp.icon}</span>
+                    </div>
                     <span className="ait-name">{tp.name}</span>
                     <span className="ait-diff">{tp.difficulty}</span>
                   </div>
@@ -508,7 +518,9 @@ function Create() {
             ) : (
               <>
                 <div className="modal-hero" style={{ background: 'linear-gradient(145deg, #1e1e2a 0%, #181820 100%)' }}>
-                  <span className="modal-hero-icon">{activeDetail.icon}</span>
+                  <img className="modal-hero-img" src={activeDetail.image} alt={activeDetail.name}
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                  <span className="modal-hero-icon" style={{ display: 'none' }}>{activeDetail.icon}</span>
                 </div>
                 <h2 className="modal-title">{activeDetail.name}</h2>
                 <p className="modal-desc">{t('tpl_detail_desc')} ({activeDetail.difficulty})</p>

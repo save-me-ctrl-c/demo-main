@@ -39,7 +39,11 @@
   transition: border-color 0.2s ease, transform 0.15s ease;
 }
 .mentor-card:hover, .mentor-card:focus { border-color: var(--mc, #8D8AD1); transform: translateX(4px); }
-.mentor-avatar { font-size: 2.2rem; flex-shrink: 0; width: 56px; text-align: center; }
+.mentor-avatar { font-size: 2.2rem; flex-shrink: 0; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+.mentor-avatar-img-ob { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.mentor-avatar-fallback { font-size: 2.2rem; display: flex; align-items: center; justify-content: center; }
+.ob-badge-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; display: inline-block; vertical-align: middle; margin-right: 4px; }
+.ob-badge-fallback { margin-right: 4px; vertical-align: middle; }
 .mentor-info { flex: 1; min-width: 0; }
 .mentor-info h3 { font-size: 1rem; font-weight: 700; color: #F0EEFF; }
 .mentor-specialty { display: block; font-size: 0.8rem; color: var(--mc, #8D8AD1); font-weight: 600; margin-top: 1px; }

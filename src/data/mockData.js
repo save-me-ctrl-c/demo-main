@@ -104,12 +104,12 @@ export const aiTools = [
 ]
 
 export const templates = [
-  { name: 'Azonto Basic', difficulty: 'Beginner', icon: '💃' },
-  { name: 'Amapiano Groove', difficulty: 'Intermediate', icon: '🕺' },
-  { name: 'Viral Challenge', difficulty: 'Any Level', icon: '🔥' },
-  { name: 'Dance Battle', difficulty: 'Advanced', icon: '⚡' },
-  { name: 'Duet Creator', difficulty: 'Any Level', icon: '👥' },
-  { name: 'Slow Motion', difficulty: 'Any Level', icon: '🎬' },
+  { name: 'Azonto Basic', difficulty: 'Beginner', icon: '💃', image: '/media/templates/template-azonto.png' },
+  { name: 'Amapiano Groove', difficulty: 'Intermediate', icon: '🕺', image: '/media/templates/template-amapiano.png' },
+  { name: 'Viral Challenge', difficulty: 'Any Level', icon: '🔥', image: '/media/templates/template-viral.png' },
+  { name: 'Dance Battle', difficulty: 'Advanced', icon: '⚡', image: '/media/templates/template-dance-battle.png' },
+  { name: 'Duet Creator', difficulty: 'Any Level', icon: '👥', image: '/media/templates/template-duet.png' },
+  { name: 'Slow Motion', difficulty: 'Any Level', icon: '🎬', image: '/media/templates/template-slowmo.png' },
 ]
 
 export const drafts = [
@@ -182,6 +182,110 @@ export const userProfile = {
   tipsReceived: '8,920',
   device: { name: 'Transsion Smart Speaker', model: 'TS-200', connected: true },
 }
+
+// ========================
+// AI Dance Mentors — detailed instructor profiles
+// ========================
+export const mentors = [
+  {
+    id: 'm1',
+    name: 'Zuri',
+    avatar: '🤖💃',
+    specialty: 'Afrobeat & Azonto',
+    description: 'Zuri是加纳阿克拉走出的Afrobeat女王，拥有10年+教学经验。她深谙Azonto、Afrobeat及加纳传统舞蹈，动作刚柔并济，完美展现非洲女性的力量与优雅。从零基础到进阶，Zuri的课程让每位舞者都能找到自己的节奏。',
+    descriptionEn: 'Zuri is the Afrobeat queen from Accra, Ghana, with 10+ years of teaching experience. She masters Azonto, Afrobeat, and traditional Ghanaian dance, blending power with grace. Her courses guide every dancer from beginner to advanced, finding their unique rhythm.',
+    color: '#FF6B35',
+    level: 'All Levels',
+    students: '12.4K',
+    styles: ['Azonto', 'Afrobeat', 'Ghanaian Traditional', 'Alkayida'],
+    highlight: '加纳Afrobeat天后 · 10年教学经验',
+    packs: [
+      { name: 'Azonto入门基础包', desc: '10个Azonto核心动作 · 分步详解', icon: '💃', size: '48 MB', lessons: 10, duration: '1h 20m' },
+      { name: 'Afrobeat精通课', desc: '高阶编舞与Freestyle技巧', icon: '🔥', size: '85 MB', lessons: 15, duration: '2h 45m' },
+    ],
+  },
+  {
+    id: 'm2',
+    name: 'Amara',
+    avatar: '🤖🕺',
+    specialty: 'Amapiano & House',
+    description: 'Amara是南非约翰内斯堡的Amapiano先锋导师。专精Log Drum节奏、病毒式挑战舞蹈和派对舞步，她的课程充满律动感与街头活力。无论你是想掌握最新Amapiano舞步还是House基础，Amara都能带你入门。',
+    descriptionEn: 'Amara is the Amapiano pioneer from Johannesburg, South Africa. Specializing in log drum grooves, viral challenges, and party moves, her courses pulse with rhythm and street energy. From latest Amapiano steps to House foundations, Amara has you covered.',
+    color: '#40C4D8',
+    level: 'Beginner+',
+    students: '18.9K',
+    styles: ['Amapiano', 'House', 'Pouncing Cat', 'Dudula'],
+    highlight: '南非Amapiano先锋 · 病毒舞蹈专家',
+    packs: [
+      { name: 'Amapiano律动课', desc: 'Log Drum基础与热门Amapiano套路', icon: '🎹', size: '62 MB', lessons: 12, duration: '2h 10m' },
+      { name: 'House舞蹈精要', desc: '脚步基础、Jacking与南非House风格', icon: '🏠', size: '55 MB', lessons: 8, duration: '1h 30m' },
+    ],
+  },
+  {
+    id: 'm3',
+    name: 'Kofi',
+    avatar: '🤖🎯',
+    specialty: 'Highlife & Fusion',
+    description: 'Kofi擅长将传统非洲舞蹈与现代编舞融合。他以Highlife为基础，融入当代Afro-Fusion元素，创造出独一无二的舞蹈风格。适合有一定基础的舞者，探索非洲舞蹈的深厚文化底蕴与现代创新。',
+    descriptionEn: 'Kofi blends traditional African dance with modern choreography. Using Highlife as his foundation with contemporary Afro-Fusion elements, he creates unique dance styles. Perfect for dancers with some experience seeking Africa\'s deep cultural roots with modern innovation.',
+    color: '#FFB703',
+    level: 'Intermediate',
+    students: '8.2K',
+    styles: ['Highlife', 'Afro-Fusion', 'Traditional', 'Contemporary'],
+    highlight: '传统与现代融合大师 · 文化传承者',
+    packs: [
+      { name: 'Highlife基础课', desc: '传统Highlife舞步与现代融合技巧', icon: '🎷', size: '40 MB', lessons: 8, duration: '1h 10m' },
+    ],
+  },
+  {
+    id: 'm4',
+    name: 'Nia',
+    avatar: '🤖✨',
+    specialty: 'Kizomba & Semba',
+    description: 'Nia来自安哥拉罗安达，是Kizomba与Semba的权威导师。她的教学注重双人配合、身体律动与技术细节，从基础步伐到高级旋转，带你领略安哥拉最性感的舞蹈魅力。适合想深入学习Kizomba的舞者。',
+    descriptionEn: 'Nia from Luanda, Angola, is the authority on Kizomba & Semba. Her teaching focuses on partner connection, body movement, and technical detail — from basic steps to advanced turns. Experience Angola\'s most sensual dance style.',
+    color: '#FF5C8A',
+    level: 'All Levels',
+    students: '15.1K',
+    styles: ['Kizomba', 'Semba', 'Tarraxinha', 'Partner Work'],
+    highlight: '安哥拉Kizomba权威 · 双人舞专家',
+    packs: [
+      { name: 'Kizomba连接课', desc: '双人配合、引领跟随、性感Kizomba', icon: '💑', size: '70 MB', lessons: 14, duration: '3h 0m' },
+    ],
+  },
+  {
+    id: 'm5',
+    name: 'Tunde',
+    avatar: '🤖🔥',
+    specialty: 'Street & Viral',
+    description: 'Tunde是TikTok上的病毒舞蹈制造机！他精通短视频编舞、挑战赛套路和街头舞蹈融合，课程节奏快、趣味性强，每节课都能让你学会一支吸睛热舞。适合任何水平的舞者，随时随地开启舞蹈挑战。',
+    descriptionEn: 'Tunde is the viral dance sensation from TikTok! Mastering short-form choreography, challenge routines, and street dance fusion — his courses are fast-paced and fun. Every lesson teaches you an eye-catching routine. Any level, anywhere, start your dance challenge.',
+    color: '#00E676',
+    level: 'Any Level',
+    students: '28.3K',
+    styles: ['Street Dance', 'Viral Challenges', 'Freestyle', 'TikTok Trends'],
+    highlight: 'TikTok病毒舞蹈制造机 · 28000+学员',
+    packs: [
+      { name: '病毒挑战包', desc: '15个热门舞蹈挑战+教学视频', icon: '📱', size: '95 MB', lessons: 15, duration: '2h 30m' },
+    ],
+  },
+  {
+    id: 'm6',
+    name: 'Sade',
+    avatar: '🤖👑',
+    specialty: 'Afro-Latin Fusion',
+    description: 'Sade是跨界舞蹈女王，将Afrobeat的热力与拉丁节奏完美融合。她精通Salsa、Bachata与Afro-Caribbean风格，创造出独特的Afro-Latin舞蹈体系。适合中高级舞者，探索非洲与拉美舞蹈的奇妙交汇。',
+    descriptionEn: 'Sade is the crossover dance queen, blending Afrobeat heat with Latin rhythms. She masters Salsa, Bachata, and Afro-Caribbean styles, creating a unique Afro-Latin dance system. For intermediate+ dancers exploring the fascinating intersection of African and Latin dance.',
+    color: '#B388FF',
+    level: 'Intermediate+',
+    students: '6.7K',
+    styles: ['Salsa', 'Bachata', 'Afro-Caribbean', 'Crossover'],
+    highlight: '跨界舞蹈女王 · 非洲x拉丁融合',
+    packs: [
+      { name: 'Afro-Latin融合课', desc: 'Salsa遇见Afrobeat · 跨界编舞', icon: '💃🔥', size: '58 MB', lessons: 10, duration: '1h 50m' },
+    ],
+  },
+]
 
 export const menuItems = [
   { icon: '👑', label: 'Member Center', badge: 'GOLD', accent: true },
