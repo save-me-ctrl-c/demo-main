@@ -40,7 +40,7 @@ function MusicPlayer({
               onError={(e) => { e.target.style.display = 'none' }} />
           ) : null}
           <span className="mp-cover-fallback" style={{
-            background: `linear-gradient(135deg, ${song.color || '#8D8AD1'}, ${(song.color || '#8D8AD1')}66)`,
+            background: `linear-gradient(135deg, ${song.color || '#7c3aed'}, ${(song.color || '#7c3aed')}66)`,
             display: !song.coverUrl ? 'flex' : 'none',
           }}>🎵</span>
         </button>

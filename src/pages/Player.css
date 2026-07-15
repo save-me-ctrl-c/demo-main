@@ -64,12 +64,12 @@
 .plr-like { background: none; border: none; cursor: pointer; padding: 8px; transition: transform 0.2s ease; flex-shrink: 0; }
 .plr-like:active { transform: scale(0.85); }
 .plr-tags { display: flex; gap: var(--sp-xs); margin-top: var(--sp-xs); flex-wrap: wrap; }
-.plr-tags span { font-size: var(--fs-xs); color: var(--color-text-muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: var(--radius-full); }
+.plr-tags span { font-size: var(--fs-xs); color: var(--color-text-muted); background: var(--color-card); border: 1px solid var(--color-border); padding: 4px 10px; border-radius: var(--radius-full); }
 
 /* ── Progress ── */
 .plr-progress { padding: clamp(12px, 2vh, 20px) 0 clamp(8px, 1vh, 14px); }
 .plr-track {
-  height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer;
+  height: 3px; background: var(--color-surface); border-radius: 2px; cursor: pointer;
   position: relative;
 }
 .plr-track:hover { height: 5px; margin-top: -1px; transition: height 0.15s ease; }

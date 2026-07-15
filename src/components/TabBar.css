@@ -1,7 +1,7 @@
 .tab-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
   height: var(--tab-height); padding-bottom: var(--safe-bottom);
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-card) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex; align-items: center; justify-content: space-around;
@@ -20,7 +20,7 @@
 }
 
 .tab-item.active {
-  background: rgba(141,138,209,0.15);
+  background: var(--color-accent-glow);
   transform: scale(1.06);
 }
 

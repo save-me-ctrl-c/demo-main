@@ -90,7 +90,7 @@ const DIGITAL_HUMANS = [
 function GuestHome() {
   const { t, lang } = useT()
   const navigate = useNavigate()
-  const { isLoggedIn, isGuest, logout } = useAuth()
+  const { isLoggedIn, isGuest, guestLogin, logout } = useAuth()
   const [dontShow, setDontShow] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
@@ -107,6 +107,11 @@ function GuestHome() {
 
   const handleEnter = () => {
     if (dontShow && !isGuest) setSkipUntil(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    navigate('/app', { replace: true })
+  }
+
+  const handleSkipOfflineResources = async () => {
+    if (!isLoggedIn) await guestLogin()
     navigate('/app', { replace: true })
   }
 
@@ -247,7 +252,7 @@ function GuestHome() {
         <button className="guest-dl-btn primary" onClick={() => setShowModal(true)}>
           <Download size={14} /> {lang === 'zh' ? '离线资源' : 'Offline Packs'}
         </button>
-        <button className="guest-dl-btn" onClick={handleEnter}>
+        <button className="guest-dl-btn" onClick={handleSkipOfflineResources}>
           {lang === 'zh' ? '跳过' : 'Skip'} →
         </button>
       </div>
@@ -261,7 +266,7 @@ function GuestHome() {
               className={`guest-song-card ${currentSong?.id === song.id ? 'playing' : ''}`}
               onClick={() => playSong(song, songs)}
               style={{ '--delay': `${i * 0.05}s` }}>
-              <div className="guest-song-cover" style={{ background: song.color || '#8D8AD1' }}>
+              <div className="guest-song-cover" style={{ background: song.color || '#7c3aed' }}>
                 {currentSong?.id === song.id && isPlaying ? '🎵' : '▶'}
               </div>
               <div className="guest-song-info">
@@ -307,7 +312,7 @@ function GuestHome() {
       {/* Mini Player */}
       {currentSong && (
         <div className="guest-player">
-          <div className="guest-player-cover" style={{ background: currentSong.color || '#8D8AD1' }}>🎵</div>
+          <div className="guest-player-cover" style={{ background: currentSong.color || '#7c3aed' }}>🎵</div>
           <div className="guest-player-info" onClick={() => playSong(currentSong, queue)}>
             <div className="guest-player-title">{currentSong.title}</div>
             <div className="guest-player-artist">
@@ -384,7 +389,7 @@ function GuestHome() {
                 {downloadedPacks.has('Tunde') && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
               </label>
               {/* AI Model */}
-              <label className="guest-check-row" style={{ borderLeftColor: '#8D8AD1' }}>
+              <label className="guest-check-row" style={{ borderLeftColor: '#7c3aed' }}>
                 <input type="checkbox" checked={dlCheck.ai} onChange={() => setDlCheck(c => ({ ...c, ai: !c.ai }))}
                   disabled={downloadedPacks.has('AI')} />
                 <span className="guest-check-emoji">🤖</span>
@@ -493,7 +498,7 @@ function GuestHome() {
               ))}
               {downloadedPacks.has('AI') && (
                 <div className="gwc-item">
-                  <span className="gwc-item-icon" style={{ background: '#8D8AD1' }}>🤖</span>
+                  <span className="gwc-item-icon" style={{ background: '#7c3aed' }}>🤖</span>
                   <span className="gwc-item-name">{lang === 'zh' ? 'AI 打分已就绪' : 'AI Scoring Ready'}</span>
                 </div>
               )}

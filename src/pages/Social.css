@@ -13,7 +13,7 @@
 
 /* Hero card — static thumbnail, no side actions */
 .feed-card { position:relative; margin:var(--sp-sm) var(--sp-md); border-radius:var(--radius-lg); overflow:hidden; height:clamp(380px,55dvh,520px); cursor:pointer; }
-.feed-thumb { width:100%; height:100%; background:linear-gradient(180deg, var(--accent,#8D8AD1)44 0%, #0a0a0a 100%); display:flex; align-items:center; justify-content:center; }
+.feed-thumb { width:100%; height:100%; background:linear-gradient(180deg, color-mix(in srgb, var(--accent, var(--color-accent)) 35%, transparent) 0%, #0a0a0a 100%); display:flex; align-items:center; justify-content:center; }
 .feed-play-icon { font-size:clamp(3rem,12vw,5rem); opacity:0.15; color:#fff; }
 .feed-info { position:absolute; left:14px; right:14px; bottom:24px; z-index:2; }
 .feed-user-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
@@ -25,7 +25,7 @@
 .feed-meta { display:flex; gap:10px; font-size:0.7rem; color:rgba(255,255,255,0.55); }
 .feed-meta span { display:inline-flex; align-items:center; gap:3px; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
 .feed-card-overlay { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; padding-bottom:14px; background:linear-gradient(transparent 60%,rgba(0,0,0,0.5)); opacity:1; }
-.feed-card-overlay span { color:#fff; font-size:0.8rem; font-weight:600; background:rgba(141,138,209,0.3); padding:6px 18px; border-radius:var(--radius-full); border:1px solid rgba(255,255,255,0.2); }
+.feed-card-overlay span { color:#fff; font-size:0.8rem; font-weight:600; background:var(--color-accent-glow); padding:6px 18px; border-radius:var(--radius-full); border:1px solid rgba(255,255,255,0.2); }
 
 /* More row */
 .more-videos-row { padding-bottom:var(--sp-sm); }

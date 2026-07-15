@@ -9,7 +9,7 @@
 .pf-names h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-id { font-size: var(--fs-xs); color: var(--color-text-muted); }
 .pf-edit-btn {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-card); border: 1px solid var(--color-border);
   color: var(--color-text-secondary); padding: clamp(5px, 0.7vh, 8px) clamp(10px, 3vw, 16px);
   border-radius: var(--radius-full); font-size: var(--fs-xs); cursor: pointer; min-height: auto;
   display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;
@@ -60,12 +60,12 @@
 .pf-menu-item:active:not(:has(button)) { background: var(--color-card-hover); }
 .pfm-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pfm-label.accent { color: var(--color-accent); font-weight: 600; }
-.pfm-badge { font-size: var(--fs-xs); padding: 3px 8px; border-radius: 10px; background: rgba(255,255,255,0.06); color: var(--color-text-muted); white-space: nowrap; }
+.pfm-badge { font-size: var(--fs-xs); padding: 3px 8px; border-radius: 10px; background: var(--color-card); color: var(--color-text-muted); white-space: nowrap; }
 .pfm-badge.on { color: #34C759; }
 .pfm-badge.accent { background: var(--color-accent); color: #fff; font-weight: 700; }
 
 .pf-footer { padding: var(--sp-xl) var(--sp-md); display: flex; flex-direction: column; align-items: center; gap: var(--sp-sm); }
-.logout-btn { width: 100%; padding: clamp(12px, 1.5vh, 16px); background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #FF3B30; border-radius: var(--radius-full); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.logout-btn { width: 100%; padding: clamp(12px, 1.5vh, 16px); background: transparent; border: 1px solid var(--color-border); color: #dc2626; border-radius: var(--radius-full); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
 .pf-version { font-size: var(--fs-xs); color: var(--color-text-dim); }
 
 /* === Sub-page Sheet Content === */

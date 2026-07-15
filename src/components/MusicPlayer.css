@@ -22,7 +22,7 @@
 
 /* ── Progress track (top thin bar) ── */
 .mp-progress-track {
-  height: 2px; background: rgba(255,255,255,0.08); cursor: pointer; flex-shrink: 0;
+  height: 2px; background: rgba(255,255,255,0.32); cursor: pointer; flex-shrink: 0;
   position: relative;
 }
 .mp-progress-track:hover { height: 4px; margin-top: -1px; transition: height 0.15s ease; }
@@ -83,7 +83,7 @@
 }
 .mp-ctrl-btn:hover, .mp-ctrl-btn:active { opacity: 0.9; }
 .mp-ctrl-btn:active { transform: scale(0.85); }
-.mp-ctrl-btn.active { opacity: 1; color: #B5B3E6; }
+.mp-ctrl-btn.active { opacity: 1; color: #f3e8ff; }
 .mp-play-btn {
   width: 32px; height: 32px; opacity: 1;
   background: var(--color-nowplaying-text); color: var(--color-nowplaying-bar);
