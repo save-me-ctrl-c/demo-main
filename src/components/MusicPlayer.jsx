@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Download } from './Icon'
+import { songCoverFor } from '../data/mediaAssets'
 import './MusicPlayer.css'
 
 // mode: 0=sequential, 1=shuffle, 2=repeat-one
@@ -35,14 +36,7 @@ function MusicPlayer({
       <div className="mp-row">
         {/* Cover — fix: show image or fallback */}
         <button className="mp-cover" onClick={(e) => { e.stopPropagation(); navigate(`/player/${song.id}`) }}>
-          {(song.coverUrl) ? (
-            <img src={song.coverUrl} alt={song.title} className="mp-cover-img"
-              onError={(e) => { e.target.style.display = 'none' }} />
-          ) : null}
-          <span className="mp-cover-fallback" style={{
-            background: `linear-gradient(135deg, ${song.color || '#7c3aed'}, ${(song.color || '#7c3aed')}66)`,
-            display: !song.coverUrl ? 'flex' : 'none',
-          }}>🎵</span>
+          <img src={song.coverUrl || songCoverFor(song)} alt={song.title} className="mp-cover-img" />
         </button>
 
         <div className="mp-info" onClick={() => navigate(`/player/${song.id}`)}>

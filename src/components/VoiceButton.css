@@ -31,5 +31,6 @@
 .vp-hint { font-size: var(--fs-xs); color: var(--color-text-secondary); line-height: 1.4; }
 
 @media (min-width: 768px) {
-  .voice-fab { right: calc(50% - clamp(155px, 20vw, 195px)); }
+  .voice-fab { right: 32px; bottom: 32px; width: 48px; height: 48px; }
+  .voice-panel { max-width: 240px; }
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { songs } from '../data/mockData'
+import { songs as sourceSongs } from '../data/mockData'
+import { withSongArtwork } from '../data/mediaAssets'
 import { useT } from '../i18n/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { parseIntent, findSongs, speak } from '../services/voiceAssistant'
@@ -8,6 +9,7 @@ import { Play, Pause, SkipForward, SkipBack, Download, Check, X, Sparkles } from
 import './GuestHome.css'
 
 const SKIP_KEY = 'afrogo_guest_skip_until'
+const songs = sourceSongs.map(withSongArtwork)
 function getSkipUntil() { try { return parseInt(localStorage.getItem(SKIP_KEY), 10) || 0 } catch { return 0 } }
 function setSkipUntil(ts) { try { localStorage.setItem(SKIP_KEY, String(ts)) } catch {} }
 
@@ -266,9 +268,7 @@ function GuestHome() {
               className={`guest-song-card ${currentSong?.id === song.id ? 'playing' : ''}`}
               onClick={() => playSong(song, songs)}
               style={{ '--delay': `${i * 0.05}s` }}>
-              <div className="guest-song-cover" style={{ background: song.color || '#7c3aed' }}>
-                {currentSong?.id === song.id && isPlaying ? '🎵' : '▶'}
-              </div>
+              <div className="guest-song-cover"><img src={song.coverUrl} alt={song.title} />{currentSong?.id === song.id && isPlaying && <span>♪</span>}</div>
               <div className="guest-song-info">
                 <div className="guest-song-title">{song.title}</div>
                 <div className="guest-song-artist">{song.artist}</div>
@@ -312,7 +312,7 @@ function GuestHome() {
       {/* Mini Player */}
       {currentSong && (
         <div className="guest-player">
-          <div className="guest-player-cover" style={{ background: currentSong.color || '#7c3aed' }}>🎵</div>
+          <div className="guest-player-cover"><img src={currentSong.coverUrl} alt="" /></div>
           <div className="guest-player-info" onClick={() => playSong(currentSong, queue)}>
             <div className="guest-player-title">{currentSong.title}</div>
             <div className="guest-player-artist">

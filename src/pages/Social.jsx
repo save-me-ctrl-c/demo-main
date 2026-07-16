@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { videos as videosApi } from '../api'
 import { videos as fallbackVideos, topics as fallbackTopics, rankings as fallbackRankings } from '../data/mockData'
+import { avatarFor } from '../data/mediaAssets'
 import { useT } from '../i18n/LanguageContext'
 import { useTheme } from '../i18n/ThemeContext'
 import LanguageSwitch from '../components/LanguageSwitch'
@@ -27,7 +28,7 @@ function Social() {
       try {
         const [vRes, tRes, rRes] = await Promise.all([videosApi.list(), videosApi.topics(), videosApi.rankings()])
         setVideos(vRes.videos.map((v, i) => ({
-          id: v.id, user: { name: v.user.name, avatar: v.user.avatar, verified: v.verified, followers: v.user.followers },
+          id: v.id, user: { name: v.user.name, avatar: avatarFor(v.user.name, i), verified: v.verified, followers: v.user.followers },
           desc: v.desc, song: `${v.songTitle} — ${v.songArtist}`,
           likes: v.likes, comments: v.comments, shares: v.shares, tips: v.tips,
           color: v.color, dance: v.danceStyle, region: v.region,
@@ -110,7 +111,7 @@ function Social() {
         <div className="feed-thumb" style={{ backgroundImage: `url(${heroVideo?.thumbnail || '/media/dance/1_thumb.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div className="feed-info">
           <div className="feed-user-row">
-            <span className="feed-avatar">{heroVideo?.user?.avatar}</span>
+            <span className="feed-avatar"><img src={avatarFor(heroVideo?.user, 0)} alt="" /></span>
             <span className="feed-username">{heroVideo?.user?.name}</span>
             {heroVideo?.user?.verified && <span className="verified-mark">✓</span>}
             <span className="feed-follow"><Plus size={12} /> {t('social_follow')}</span>
@@ -308,7 +309,7 @@ const VideoSlide = memo(function VideoSlide({ video, idx, active, onToast }) {
       {/* Bottom info */}
       <div className="feed-fs-info">
         <div className="fs-user-row">
-          <span className="fs-avatar">{video.user.avatar}</span>
+          <span className="fs-avatar"><img src={avatarFor(video.user, idx)} alt="" /></span>
           <span className="fs-username">{video.user.name}</span>
           {video.user.verified && <span className="verified-mark">✓</span>}
           <button className="fs-follow"><Plus size={12} /> Follow</button>

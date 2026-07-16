@@ -1,7 +1,10 @@
 /* === AfroGo — Voice Assistant: Intent + Fuzzy Song Matcher === */
 
 import Fuse from 'fuse.js'
-import { songs } from '../data/mockData'
+import { songs as sourceSongs } from '../data/mockData'
+import { withSongArtwork } from '../data/mediaAssets'
+
+const songs = sourceSongs.map(withSongArtwork)
 
 /* ── Fuse.js instance (built once) ── */
 const fuse = new Fuse(songs, {

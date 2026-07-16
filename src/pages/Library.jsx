@@ -1,32 +1,50 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { library as libraryApi, mentors as mentorsApi } from '../api'
+import { mentors as mentorsApi } from '../api'
 import { playlists as fallbackPlaylists, songs as fallbackSongs, mentors as fallbackMentors } from '../data/mockData'
+import { MUSIC_COVERS, songCoverFor, withSongArtwork } from '../data/mediaAssets'
 import { useT } from '../i18n/LanguageContext'
-import { Play, Plus, Download, ArrowLeft, Clock, Sparkles, Music, Crown, Users, Star } from '../components/Icon'
+import Portal from '../components/Portal'
+import { Play, Plus, Download, ArrowLeft, Clock, Sparkles, Music, Crown, Users, X, Check, Trash2 } from '../components/Icon'
 import './Library.css'
 
-// Filter out UUID-based cover URLs that don't exist
-function fixCover(url) {
-  if (!url) return null
-  if (/\/cover_[a-f0-9]{8}\.png$/i.test(url)) return null
-  return url
+const PLAYLIST_STORAGE_KEY = 'afrogo_custom_playlists_v1'
+const ALL_SONGS = fallbackSongs.map(withSongArtwork)
+const DEFAULT_SONG_GROUPS = [
+  ['s1', 's4', 's6', 's9'], ['s2', 's6', 's7'], ['s1', 's2', 's8'],
+  ['s1', 's4', 's9'], ['s3', 's5', 's8', 's9'], ['s2', 's4', 's7'],
+  ['s2', 's3', 's5', 's8'], ['s4', 's6', 's7', 's9'],
+]
+
+const DEFAULT_PLAYLISTS = fallbackPlaylists.map((playlist, index) => ({
+  ...playlist,
+  songs: DEFAULT_SONG_GROUPS[index].length,
+  songIds: DEFAULT_SONG_GROUPS[index],
+  coverUrl: MUSIC_COVERS[index % MUSIC_COVERS.length],
+}))
+
+function readCustomPlaylists() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PLAYLIST_STORAGE_KEY) || '[]')
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
 }
 
 // Fix #6: SongRow defined at module scope (not inside Library)
 // SongRow — compact mode for offline songs (icon only)
-function SongRow({ s, i, onClick, showIdx = true, compact = false }) {
+function SongRow({ s, i, onClick, showIdx = true, compact = false, onRemove }) {
   if (compact) {
     return (
       <div key={s.id} className="song-row compact" onClick={() => onClick?.(s)} style={{ animationDelay: `${i * 0.03}s` }}>
-        <span className="song-compact-icon" style={{ background: `linear-gradient(135deg, ${s.color || '#1EABBE'}22, ${s.color || '#1EABBE'}11)` }}>
-          🎵
-        </span>
+        <img className="song-compact-icon" src={s.coverUrl} alt="" />
         <div className="song-info">
           <span className="song-title">{s.title}</span>
           <span className="song-artist">{s.artist}</span>
         </div>
         <span className="song-dur">{s.duration}</span>
+        {onRemove && <button className="song-remove" onClick={(event) => { event.stopPropagation(); onRemove(s.id) }} aria-label="Remove"><Trash2 size={14} /></button>}
       </div>
     )
   }
@@ -35,14 +53,7 @@ function SongRow({ s, i, onClick, showIdx = true, compact = false }) {
     <div key={s.id} className="song-row" onClick={() => onClick?.(s)} style={{ animationDelay: `${i * 0.03}s` }}>
       {showIdx && <span className="song-idx">{i + 1}</span>}
       <div className="song-cover">
-        {s.coverUrl ? (
-          <img src={s.coverUrl} alt={s.title} className="song-cover-img"
-            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-        ) : null}
-        <span className="song-cover-fallback" style={{
-          background: `linear-gradient(135deg, ${s.color || '#1EABBE'}, ${(s.color || '#1EABBE')}66)`,
-          display: s.coverUrl ? 'none' : 'flex',
-        }}>🎵</span>
+        <img src={s.coverUrl} alt={s.title} className="song-cover-img" />
         {s.type === 'offline' && <span className="song-local-dot" title="Local file" />}
       </div>
       <div className="song-info">
@@ -50,21 +61,36 @@ function SongRow({ s, i, onClick, showIdx = true, compact = false }) {
         <span className="song-artist">{s.artist}</span>
       </div>
       <span className="song-dur">{s.duration}</span>
+      {onRemove && <button className="song-remove" onClick={(event) => { event.stopPropagation(); onRemove(s.id) }} aria-label="Remove"><Trash2 size={14} /></button>}
     </div>
   )
 }
 
 function Library() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [activeTab, setActiveTab] = useState('All')
   const [selectedPlaylist, setSelectedPlaylist] = useState(null)
-  const [playlists, setPlaylists] = useState(fallbackPlaylists)
-  const [recentlyPlayed, setRecentlyPlayed] = useState(fallbackSongs.slice(0, 4))
-  const [playlistSongs, setPlaylistSongs] = useState([])
+  const [customPlaylists, setCustomPlaylists] = useState(readCustomPlaylists)
+  const [playlistDialog, setPlaylistDialog] = useState(null)
+  const [playlistName, setPlaylistName] = useState('')
+  const [playlistDescription, setPlaylistDescription] = useState('')
+  const [playlistCover, setPlaylistCover] = useState(MUSIC_COVERS[0])
+  const [songPickerOpen, setSongPickerOpen] = useState(false)
+  const [draftSongIds, setDraftSongIds] = useState([])
   const { handlePlaySong } = useOutletContext()
   const [mentors, setMentors] = useState(fallbackMentors)
-  const [mentorPacks, setMentorPacks] = useState([])
   const [selectedMentor, setSelectedMentor] = useState(null)
+  const playlists = useMemo(() => [...customPlaylists, ...DEFAULT_PLAYLISTS], [customPlaylists])
+  const recentlyPlayed = ALL_SONGS.slice(0, 4)
+  const labels = lang === 'zh' ? {
+    create: '新建歌单', createTitle: '创建歌单', name: '歌单名称', description: '歌单描述',
+    chooseCover: '选择封面', addSongs: '添加歌曲', save: '保存', remove: '移除歌曲',
+    delete: '删除歌单', empty: '歌单中还没有歌曲', custom: '我的歌单', cancel: '取消',
+  } : {
+    create: 'New playlist', createTitle: 'Create playlist', name: 'Playlist name', description: 'Description',
+    chooseCover: 'Choose cover', addSongs: 'Add songs', save: 'Save', remove: 'Remove song',
+    delete: 'Delete playlist', empty: 'No songs in this playlist', custom: 'My playlist', cancel: 'Cancel',
+  }
 
   // Fetch mentors from API
   useEffect(() => {
@@ -80,7 +106,7 @@ function Library() {
           highlight: fallbackMentors.find(fm => fm.name === m.name)?.highlight || m.specialty,
           packs: fallbackMentors.find(fm => fm.name === m.name)?.packs || [],
         })))
-        setMentorPacks(pRes.packs)
+        void pRes
       } catch (err) {
         console.warn('Failed to fetch mentors, using mock:', err.message)
       }
@@ -88,93 +114,112 @@ function Library() {
     fetchMentors()
   }, [])
 
-  // Fetch songs for Recently Played
   useEffect(() => {
-    async function fetchSongs() {
-      try {
-        const songsRes = await libraryApi.songs()
-        setRecentlyPlayed(songsRes.songs.slice(0, 4).map(s => ({
-          id: s.id, title: s.title, artist: s.artist, duration: s.duration,
-          genre: s.genre, dance: s.dance, color: s.color, coverUrl: fixCover(s.coverUrl), type: s.type, fileUrl: s.fileUrl,
-        })))
-      } catch (err) {
-        console.warn('Failed to fetch songs, using mock:', err.message)
-      }
-    }
-    fetchSongs()
-  }, [])
+    localStorage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(customPlaylists))
+  }, [customPlaylists])
 
-  // Fetch playlists (re-fetched on tab change)
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const typeMap = { 'All': '', 'Offline': 'offline', 'Online': 'online', 'AI Teaching': 'teaching', 'VIP': 'vip' }
-        const plRes = await libraryApi.playlists(typeMap[activeTab] || '')
-        setPlaylists(plRes.playlists.map(pl => ({
-          id: pl.id, name: pl.name, icon: pl.icon, color: pl.color,
-          songs: pl.songCount, type: pl.type, desc: pl.description,
-          size: pl.size, downloaded: pl.downloaded, locked: pl.locked,
-          lessons: pl.lessons, duration: pl.duration,
-        })))
-      } catch (err) {
-        console.warn('Failed to fetch library data, using mock:', err.message)
-      }
-    }
-    fetchData()
-  }, [activeTab])
+  function openCreatePlaylist() {
+    setPlaylistName('')
+    setPlaylistDescription('')
+    setPlaylistCover(MUSIC_COVERS[customPlaylists.length % MUSIC_COVERS.length])
+    setPlaylistDialog('create')
+  }
 
-  // Load playlist songs when selecting a playlist
-  useEffect(() => {
-    if (!selectedPlaylist) return
-    let cancelled = false
-    async function loadSongs() {
-      try {
-        const res = await libraryApi.playlist(selectedPlaylist.id)
-        if (!cancelled) {
-          setPlaylistSongs(res.songs.map(s => ({
-            id: s.id, title: s.title, artist: s.artist, duration: s.duration,
-            genre: s.genre, dance: s.dance, color: s.color, coverUrl: fixCover(s.coverUrl), type: s.type, fileUrl: s.fileUrl,
-          })))
-        }
-      } catch {
-        if (!cancelled) setPlaylistSongs(fallbackSongs)
-      }
+  function createPlaylist() {
+    const name = playlistName.trim()
+    if (!name) return
+    const playlist = {
+      id: `custom-${Date.now()}`,
+      name,
+      desc: playlistDescription.trim() || labels.custom,
+      type: 'personal',
+      custom: true,
+      color: '#7c3aed',
+      coverUrl: playlistCover,
+      songIds: [],
+      songs: 0,
     }
-    loadSongs()
-    return () => { cancelled = true }
-  }, [selectedPlaylist])
+    setCustomPlaylists(current => [playlist, ...current])
+    setSelectedPlaylist(playlist)
+    setPlaylistDialog(null)
+  }
+
+  function updateSelectedPlaylist(songIds) {
+    if (!selectedPlaylist?.custom) return
+    const updated = { ...selectedPlaylist, songIds, songs: songIds.length }
+    setSelectedPlaylist(updated)
+    setCustomPlaylists(current => current.map(playlist => playlist.id === updated.id ? updated : playlist))
+  }
+
+  function openSongPicker() {
+    setDraftSongIds(selectedPlaylist?.songIds || [])
+    setSongPickerOpen(true)
+  }
+
+  function deletePlaylist() {
+    if (!selectedPlaylist?.custom) return
+    setCustomPlaylists(current => current.filter(playlist => playlist.id !== selectedPlaylist.id))
+    setSelectedPlaylist(null)
+  }
 
   // ── Playlist Detail View ──
   if (selectedPlaylist) {
     const pl = playlists.find(p => p.id === selectedPlaylist.id) || selectedPlaylist
-    const queue = playlistSongs.length > 0 ? playlistSongs : fallbackSongs
+    const queue = (pl.songIds || []).map(id => ALL_SONGS.find(song => song.id === id)).filter(Boolean)
 
     return (
       <div className="library-page">
         <div className="pl-detail-header" style={{ background: `linear-gradient(180deg, ${pl.color}33 0%, var(--color-bg) 100%)` }}>
           <button className="back-btn" onClick={() => setSelectedPlaylist(null)}><ArrowLeft size={16} /> {t('back')}</button>
           <div className="pl-hero">
-            <div className="pl-hero-cover" style={{ background: `linear-gradient(135deg, ${pl.color}, ${pl.color}66)` }}>
-              <span>{pl.icon}</span>
-            </div>
+            <img className="pl-hero-cover pl-hero-cover-img" src={pl.coverUrl} alt={pl.name} />
             <div className="pl-hero-info">
               <h1>{pl.name}</h1>
-              <p>{pl.desc || (pl.songs ? `${pl.songs} ${t('songs_unit')}` : `${pl.lessons} ${t('lessons_unit')}`)}</p>
+              <p>{pl.desc || `${queue.length} ${t('songs_unit')}`}</p>
               {pl.size && <span className="pl-meta"><Download size={12} /> {pl.size}</span>}
               <div className="pl-hero-actions">
-                <button className="action-btn primary" onClick={() => { if (queue[0]) handlePlaySong(queue[0], queue) }}>
+                <button className="action-btn primary" disabled={!queue.length} onClick={() => { if (queue[0]) handlePlaySong(queue[0], queue) }}>
                   <Play size={14} /> {t('play_all')}
                 </button>
-                <button className="action-btn ghost"><Plus size={14} /> {t('save')}</button>
+                {pl.custom && <button className="action-btn ghost" onClick={openSongPicker}><Plus size={14} /> {labels.addSongs}</button>}
+                {pl.custom && <button className="action-btn danger" onClick={deletePlaylist}><Trash2 size={14} /> {labels.delete}</button>}
               </div>
             </div>
           </div>
         </div>
         <div className="song-list">
+          {!queue.length && <div className="playlist-empty"><Music size={28} /><span>{labels.empty}</span><button onClick={openSongPicker}><Plus size={14} /> {labels.addSongs}</button></div>}
           {queue.map((s, i) => (
-            <SongRow key={s.id} s={s} i={i} onClick={(song) => handlePlaySong(song, queue)} showIdx compact={pl.type === 'offline'} />
+            <SongRow key={s.id} s={s} i={i} onClick={(song) => handlePlaySong(song, queue)} showIdx compact={pl.type === 'offline'}
+              onRemove={pl.custom ? (songId) => updateSelectedPlaylist(pl.songIds.filter(id => id !== songId)) : null} />
           ))}
         </div>
+        {songPickerOpen && (
+          <Portal>
+            <div className="modal-overlay" onClick={() => setSongPickerOpen(false)}>
+              <div className="playlist-modal song-picker-modal" onClick={event => event.stopPropagation()}>
+                <div className="playlist-modal-header"><h2>{labels.addSongs}</h2><button onClick={() => setSongPickerOpen(false)}><X size={18} /></button></div>
+                <div className="song-picker-list">
+                  {ALL_SONGS.map((song, index) => {
+                    const selected = draftSongIds.includes(song.id)
+                    return (
+                      <button key={song.id} className={`song-picker-row ${selected ? 'selected' : ''}`}
+                        onClick={() => setDraftSongIds(current => selected ? current.filter(id => id !== song.id) : [...current, song.id])}>
+                        <img src={song.coverUrl} alt="" />
+                        <span><strong>{song.title}</strong><small>{song.artist}</small></span>
+                        <i>{selected && <Check size={14} />}</i>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="playlist-modal-actions">
+                  <button className="action-btn ghost" onClick={() => setSongPickerOpen(false)}>{labels.cancel}</button>
+                  <button className="action-btn primary" onClick={() => { updateSelectedPlaylist(draftSongIds); setSongPickerOpen(false) }}>{labels.save}</button>
+                </div>
+              </div>
+            </div>
+          </Portal>
+        )}
       </div>
     )
   }
@@ -205,12 +250,7 @@ function Library() {
       <div className="h-scroll recent-strip">
         {recentlyPlayed.map((s, i) => (
           <div key={s.id} className="recent-card" onClick={() => handlePlaySong(s)} style={{ '--c': s.color }}>
-            {s.coverUrl ? (
-              <img src={s.coverUrl} alt={s.title} className="recent-card-img"
-                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
-            ) : null}
-            <div className="recent-card-bg" style={{ display: s.coverUrl ? 'none' : 'block' }} />
-            {!s.coverUrl && <span className="recent-card-icon">🎵</span>}
+            <img src={s.coverUrl} alt={s.title} className="recent-card-img" />
             {s.type === 'offline' && <span className="recent-local-dot" title="Local file" />}
             <div className="recent-card-info">
               <span className="rc-title">{s.title}</span>
@@ -222,12 +262,14 @@ function Library() {
 
       <div className="section-title">
         <h2><Music size={14} className="icon-muted" /> {t('your_playlists') || 'Your Playlists'}</h2>
+        <button className="see-all section-action" onClick={openCreatePlaylist}><Plus size={13} /> {labels.create}</button>
       </div>
       <div className="pl-grid">
         {filtered.map(pl => (
           <div key={pl.id} className="pl-card" onClick={() => setSelectedPlaylist(pl)}>
-            <div className="pl-cover" style={{ background: `linear-gradient(135deg, ${pl.color}, ${pl.color}66)` }}>
-              <span className="pl-icon">{pl.icon}</span>
+            <div className="pl-cover">
+              <img className="pl-cover-img" src={pl.coverUrl} alt={pl.name} />
+              {pl.custom && <span className="pl-personal-badge">{labels.custom}</span>}
               {pl.locked && <span className="pl-lock"><Crown size={10} /></span>}
               {pl.downloaded && <span className="pl-dl"><Download size={8} /></span>}
             </div>
@@ -328,9 +370,7 @@ function Library() {
                         <div className="pl-grid" style={{ padding: 0 }}>
                           {filtered.filter(p => p.type === 'teaching').map(pl => (
                             <div key={pl.id} className="pl-card" onClick={(e) => { e.stopPropagation(); setSelectedPlaylist(pl) }}>
-                              <div className="pl-cover" style={{ background: `linear-gradient(135deg, ${pl.color}, ${pl.color}66)` }}>
-                                <span className="pl-icon">{pl.icon}</span>
-                              </div>
+                              <div className="pl-cover"><img className="pl-cover-img" src={pl.coverUrl} alt={pl.name} /></div>
                               <div className="pl-info">
                                 <h3>{pl.name}</h3>
                                 <p>{pl.lessons} {t('lessons_unit') || 'lessons'} · {pl.duration}</p>
@@ -358,7 +398,7 @@ function Library() {
           <div className="h-scroll teaching-strip">
             {filtered.filter(p => p.type === 'teaching').map(pl => (
               <div key={pl.id} className="teaching-card" onClick={() => setSelectedPlaylist(pl)} style={{ '--c': pl.color }}>
-                <div className="teaching-visual"><span>{pl.icon}</span></div>
+                <div className="teaching-visual"><img src={pl.coverUrl} alt={pl.name} /></div>
                 <div className="teaching-info">
                   <span className="tc-name">{pl.name}</span>
                   <span className="tc-meta">{pl.lessons} {t('lessons_unit')} · {pl.duration}</span>
@@ -386,6 +426,25 @@ function Library() {
         </div>
         <button className="chip">{t('manage')}</button>
       </div>
+
+      {playlistDialog === 'create' && (
+        <Portal>
+          <div className="modal-overlay" onClick={() => setPlaylistDialog(null)}>
+            <div className="playlist-modal" onClick={event => event.stopPropagation()}>
+              <div className="playlist-modal-header"><h2>{labels.createTitle}</h2><button onClick={() => setPlaylistDialog(null)}><X size={18} /></button></div>
+              <label className="playlist-field"><span>{labels.name}</span><input autoFocus value={playlistName} onChange={event => setPlaylistName(event.target.value)} maxLength={40} /></label>
+              <label className="playlist-field"><span>{labels.description}</span><textarea value={playlistDescription} onChange={event => setPlaylistDescription(event.target.value)} maxLength={120} /></label>
+              <div className="playlist-cover-field"><span>{labels.chooseCover}</span><div className="playlist-cover-grid">
+                {MUSIC_COVERS.map(cover => <button key={cover} className={playlistCover === cover ? 'active' : ''} onClick={() => setPlaylistCover(cover)}><img src={cover} alt="" />{playlistCover === cover && <i><Check size={13} /></i>}</button>)}
+              </div></div>
+              <div className="playlist-modal-actions">
+                <button className="action-btn ghost" onClick={() => setPlaylistDialog(null)}>{labels.cancel}</button>
+                <button className="action-btn primary" disabled={!playlistName.trim()} onClick={createPlaylist}>{labels.create}</button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   )
 }

@@ -116,3 +116,19 @@
   display: flex; align-items: center; justify-content: center;
 }
 .ctrl-play:active { transform: scale(0.9); }
+
+@media (min-width: 768px) {
+  .player-page {
+    width: min(900px, 100%); min-height: 100%; height: auto; margin: 0 auto;
+    padding: 44px clamp(48px, 8vw, 100px) 56px;
+  }
+  .plr-header { margin-bottom: 12px; }
+  .plr-visual { min-height: 390px; margin: 18px 0 28px; }
+  .plr-cover-art, .plr-cover-fallback { width: min(430px, 42vw); height: min(430px, 42vw); border-radius: 8px; }
+  .plr-info { padding-bottom: 8px; }
+  .plr-title-row h1 { font-size: 1.6rem; }
+  .plr-artist { font-size: 0.88rem; }
+  .plr-progress { padding: 24px 0 14px; }
+  .plr-transport { gap: 34px; }
+  .ctrl-play { width: 68px; height: 68px; }
+}

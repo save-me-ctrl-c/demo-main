@@ -1,19 +1,23 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import TabBar from './components/TabBar'
 import MusicPlayer from './components/MusicPlayer'
 import VoiceButton from './components/VoiceButton'
+import { ArrowLeft, Music, Pause, Play } from './components/Icon'
 import useWakeWord from './hooks/useWakeWord'
 import { parseIntent, findSongs } from './services/voiceAssistant'
 import { useT } from './i18n/LanguageContext'
-import { songs } from './data/mockData'
+import { songs as sourceSongs } from './data/mockData'
+import { HEAD_ICONS, withSongArtwork } from './data/mediaAssets'
 import './AppLayout.css'
 
 const HIDE_OVERLAY_ROUTES = ['/player']
 const PLAYER_ROUTES = ['/library', '/player']
+const songs = sourceSongs.map(withSongArtwork)
 
 function AppLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [currentSong, setCurrentSong] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -182,7 +186,7 @@ function AppLayout() {
   }, [])
 
   // i18n
-  const { lang } = useT()
+  const { t, lang } = useT()
 
   // Track voice assistant active state (used by useWakeWord below)
   const [voiceActive, setVoiceActive] = useState(false)
@@ -198,18 +202,8 @@ function AppLayout() {
       setWakeTrigger(c => c + 1)
       handlePlaySong(randomSong, shuffled)
     }, [handlePlaySong]),
-    // Direct song name detection — play the song immediately
-    onSongDetected: useCallback((titleHint) => {
-      const results = findSongs(titleHint, { limit: 1 })
-      const song = results[0]
-      if (song) {
-        setWakeRecommend(song.title)
-        setWakeTrigger(c => c + 1)
-        handlePlaySong(song, [song])
-      }
-    }, [handlePlaySong]),
-    enabled: showOverlay,
-    isPlaying, // pause wake word detection while music plays (no re-init)
+    enabled: location.pathname === '/app',
+    lang: lang === 'zh' ? 'zh-CN' : 'en-US',
   })
 
   // Voice command handler
@@ -284,18 +278,69 @@ function AppLayout() {
   }, [handlePlaySong, handleTogglePlay, handleNext, handlePrev, isPlaying, currentSong, lang])
 
   const bottomPadding = showOverlay ? (showPlayer && currentSong ? 120 : 64) : 0
+  const desktopPageTitle = {
+    '/app': t('tab_social'),
+    '/create': t('tab_create'),
+    '/library': t('tab_library'),
+    '/profile': t('tab_me'),
+  }[location.pathname] || t('app_name')
 
   return (
-    <div className="app-root">
+    <div className={`app-root${showOverlay ? '' : ' app-root--focused'}`}>
       <audio ref={audioRef} preload="auto" />
-      <main className="app-main" style={{ paddingBottom: bottomPadding }}>
-        <Outlet context={{
-          handlePlaySong, currentSong, isPlaying, handleTogglePlay,
-          handleNext, handlePrev, progress, currentTime, handleSeek,
-          playMode, handleCycleMode,
-          playQueue, queueIndex,
-        }} />
-      </main>
+      {showOverlay && (
+        <aside className="desktop-sidebar">
+          <div className="desktop-brand" aria-label="AfroGO">
+            <span className="desktop-brand-mark">♪</span>
+            <span>AfroGO</span>
+          </div>
+          <TabBar isPlaying={isPlaying} />
+          <div className="desktop-sidebar-note">
+            <span className="desktop-sidebar-note-label">AFROGO</span>
+            <strong>{lang === 'zh' ? '让节奏带你起舞' : 'Move with the rhythm'}</strong>
+          </div>
+        </aside>
+      )}
+
+      <section className="app-shell">
+        {showOverlay && (
+          <header className="desktop-topbar">
+            <div className="desktop-history-controls">
+              <button type="button" onClick={() => navigate(-1)} title={t('back')} aria-label={t('back')}>
+                <ArrowLeft size={17} />
+              </button>
+              <button type="button" onClick={() => navigate(1)} title="Forward" aria-label="Forward">
+                <ArrowLeft size={17} className="desktop-forward-icon" />
+              </button>
+            </div>
+            <div className="desktop-page-name">
+              <span>AfroGO</span>
+              <strong>{desktopPageTitle}</strong>
+            </div>
+            <button type="button" className="desktop-avatar-button" onClick={() => navigate('/profile')} aria-label={t('profile_title')}>
+              <img src={HEAD_ICONS[0]} alt="" />
+            </button>
+          </header>
+        )}
+        <main className="app-main" style={{ paddingBottom: bottomPadding }}>
+          <Outlet context={{
+            handlePlaySong, currentSong, isPlaying, handleTogglePlay,
+            handleNext, handlePrev, progress, currentTime, handleSeek,
+            playMode, handleCycleMode,
+            playQueue, queueIndex,
+          }} />
+        </main>
+      </section>
+
+      {showOverlay && (
+        <DesktopNowPlaying
+          song={currentSong}
+          isPlaying={isPlaying}
+          onTogglePlay={handleTogglePlay}
+          onOpenPlayer={() => currentSong && navigate(`/player/${currentSong.id}`)}
+          lang={lang}
+        />
+      )}
       {showOverlay && currentSong && showPlayer && (
         <MusicPlayer
           song={currentSong} isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
@@ -304,9 +349,45 @@ function AppLayout() {
           playMode={playMode} onCycleMode={handleCycleMode}
         />
       )}
-      {showOverlay && <TabBar isPlaying={isPlaying} />}
       {showOverlay && <VoiceButton wakeTrigger={wakeTrigger} wakeRecommend={wakeRecommend} onCommand={handleVoiceCommand} onActiveChange={setVoiceActive} />}
     </div>
+  )
+}
+
+function DesktopNowPlaying({ song, isPlaying, onTogglePlay, onOpenPlayer, lang }) {
+  const labels = lang === 'zh'
+    ? { heading: '正在播放', idle: '选择一首音乐开始', artist: '你的舞蹈音乐库' }
+    : { heading: 'Now playing', idle: 'Choose a track to begin', artist: 'Your dance music library' }
+
+  return (
+    <aside className="desktop-now-playing" aria-label={labels.heading}>
+      <div className="desktop-panel-heading">
+        <span>{labels.heading}</span>
+        {isPlaying && <i className="desktop-playing-indicator" />}
+      </div>
+      {song ? (
+        <button type="button" className="desktop-track-card" onClick={onOpenPlayer}>
+          <span className="desktop-track-cover" style={{ background: `linear-gradient(135deg, ${song.color || '#7c3aed'}, ${(song.color || '#7c3aed')}66)` }}>
+            <img src={song.coverUrl} alt="" />
+          </span>
+          <span className="desktop-track-copy">
+            <strong>{song.title}</strong>
+            <span>{song.artist}</span>
+          </span>
+        </button>
+      ) : (
+        <div className="desktop-track-empty">
+          <span><Music size={28} /></span>
+          <strong>{labels.idle}</strong>
+          <small>{labels.artist}</small>
+        </div>
+      )}
+      {song && (
+        <button type="button" className="desktop-panel-play" onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+          {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+        </button>
+      )}
+    </aside>
   )
 }
 

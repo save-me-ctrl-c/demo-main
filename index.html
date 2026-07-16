@@ -10,19 +10,6 @@
   <body>
     <div id="root"></div>
     <div id="portal-root"></div>
-    <script>
-      // === sherpa-onnx init (mirrors app-vad-asr.js without DOM deps) ===
-      const SHERPA_BASE = '/sherpa/sherpa-onnx-wasm-simd-1.13.2-vad-asr-moonshine-v2-tiny-en/'
-      var Module = {}
-      Module.locateFile = (path) => SHERPA_BASE + path
-      Module.setStatus = (msg) => console.log('[Sherpa]', msg)
-      window.__sherpaReady = new Promise((resolve) => {
-        Module.onRuntimeInitialized = () => { resolve() }
-      })
-    </script>
-    <script src="/sherpa/sherpa-onnx-wasm-simd-1.13.2-vad-asr-moonshine-v2-tiny-en/sherpa-onnx-vad.js"></script>
-    <script src="/sherpa/sherpa-onnx-wasm-simd-1.13.2-vad-asr-moonshine-v2-tiny-en/sherpa-onnx-asr.js"></script>
-    <script src="/sherpa/sherpa-onnx-wasm-simd-1.13.2-vad-asr-moonshine-v2-tiny-en/sherpa-onnx-wasm-main-vad-asr.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

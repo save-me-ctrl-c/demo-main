@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { userProfile as fallbackProfile, menuItems as fallbackMenu } from '../data/mockData'
+import { avatarFor } from '../data/mediaAssets'
 import { profile as profileApi } from '../api'
 import { useT } from '../i18n/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -241,7 +242,7 @@ function Profile() {
 
       <div className="pf-header">
         <div className="pf-avatar-wrap">
-          <span className="pf-avatar">{isGuest ? '👤' : profile.avatar}</span>
+          <span className="pf-avatar"><img src={avatarFor(isGuest ? 'guest' : profile.name, isGuest ? 2 : 0)} alt="" /></span>
           <span className="pf-level-badge" style={isGuest ? {background:'#666',color:'#aaa'} : {}}>
             {isGuest ? 'GUEST' : profile.memberLevel === 'gold' ? 'GOLD' : 'FREE'}
           </span>

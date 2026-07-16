@@ -1,6 +1,5 @@
 /* === AfroGo — Voice Recognition Hook ===
-   Multi-backend: Web Speech API (free, instant) → Sherpa-ONNX WASM (offline)
-   Auto-falls back to text input if neither is available. */
+   Browser Web Speech with a text-input fallback. */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 
@@ -9,7 +8,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
   const [status, setStatus] = useState('idle') // idle | listening | processing | error
   const [text, setText] = useState('')
-  const [backend, setBackend] = useState('web-speech') // web-speech | sherpa | text
+  const [backend, setBackend] = useState('web-speech') // web-speech | text
   const recognitionRef = useRef(null)
 
   /* ── Web Speech API ── */
@@ -52,44 +51,13 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
     recognitionRef.current = null
   }, [])
 
-  /* ── Shared voice mode — same as useWakeWord ── */
-  function getVoiceMode() {
-    try { return localStorage.getItem('afrogo_voice_mode') || 'sherpa' } catch { return 'sherpa' }
-  }
-
-  /* ── Sherpa ASR (shared via window.__afrogoAsr from useWakeWord) ── */
-  const sherpaStart = useCallback(() => {
-    return !!window.__afrogoAsr
-  }, [])
-
   /* ── Public API ── */
   const startListening = useCallback(async () => {
     setStatus('listening')
     setText('')
 
-    const mode = getVoiceMode()
-
-    if (mode === 'sherpa') {
-      // Sherpa mode: use shared VAD+ASR engine. Promise-like: one-shot callback.
-      setBackend('sherpa')
-      let fired = false
-      window.__afrogoVoiceCallback = (raw) => {
-        if (fired) return
-        fired = true
-        window.__afrogoVoiceCallback = null
-        setText(raw)
-        setStatus('idle')
-        onResult?.(raw)
-      }
-      // Clear VAD buffer to avoid stale audio being processed first
-      window.__afrogoFlushVad?.()
-      console.log('[VoiceRec] Sherpa mode — shared ASR engine active')
-      return
-    }
-
     // Web Speech mode
     setBackend('web-speech')
-    window.__afrogoVoiceCallback = null
     if (SpeechRecognition) {
       const ok = startWebSpeech()
       if (ok) return
@@ -99,11 +67,10 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
     console.log('[VoiceRec] No voice backend')
     setBackend('text')
     setStatus('idle')
-  }, [SpeechRecognition, startWebSpeech, onResult])
+  }, [SpeechRecognition, startWebSpeech])
 
   const stopListening = useCallback(() => {
     if (backend === 'web-speech') stopWebSpeech()
-    window.__afrogoVoiceCallback = null
     setStatus('idle')
   }, [backend, stopWebSpeech])
 
@@ -113,7 +80,9 @@ function useVoiceRecognition({ lang = 'en-US', onResult, onError } = {}) {
   }, [onResult])
 
   // Cleanup
-  useEffect(() => () => stopWebSpeech(), [stopWebSpeech])
+  useEffect(() => () => {
+    stopWebSpeech()
+  }, [stopWebSpeech])
 
   return {
     status, text, backend,

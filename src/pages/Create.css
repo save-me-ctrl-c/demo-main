@@ -382,3 +382,29 @@
 }
 .modal-action-btn.secondary { background: transparent; color: var(--color-text); border: 1px solid var(--color-border); margin-top: 8px; }
 .modal-actions { padding: 0 20px; }
+
+@media (min-width: 768px) {
+  .create-page { padding-bottom: 112px; }
+  .create-actions { gap: 14px; padding: 6px 32px 12px; }
+  .create-act { min-height: 136px; padding: 20px 12px; border-radius: 8px; }
+  .create-act:hover { border-color: var(--color-accent); background: var(--color-card-hover); }
+  .create-act-label { font-size: 0.8rem; }
+  .create-act-sub { font-size: 0.66rem; }
+  .template-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 0 32px 16px; }
+  .template-card { border-radius: 8px; }
+  .template-card:hover { border-color: var(--color-accent); background: var(--color-card-hover); }
+  .template-card:hover .template-play { opacity: 1; }
+  .template-info { padding: 12px; }
+  .template-name { font-size: 0.78rem; }
+  .tool-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; overflow: visible; padding: 0 32px 16px; }
+  .tool-chip { width: auto; min-height: 108px; border-radius: 8px; justify-content: center; }
+  .tool-chip:hover { border-color: var(--color-accent); background: var(--color-card-hover); }
+  .draft-list { padding: 0 32px; max-width: 860px; }
+  .draft-item { border-radius: 8px; padding: 12px; }
+  .preview-card { max-width: 520px; border-radius: 8px; }
+  .full-panel { padding: 24px max(32px, calc((100vw - 920px) / 2)); }
+}
+
+@media (min-width: 1200px) {
+  .template-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

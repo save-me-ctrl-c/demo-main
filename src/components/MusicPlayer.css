@@ -15,9 +15,25 @@
 
 @media (min-width: 768px) {
   .mini-player {
-    left: 50%; right: auto; transform: translateX(-50%);
-    width: clamp(380px, 45vw, 460px); max-width: 100vw;
+    left: 244px; right: 312px; bottom: 20px; transform: none;
+    width: auto; max-width: none; height: 72px; border: 1px solid var(--color-border);
+    border-radius: 8px; overflow: hidden; box-shadow: 0 12px 30px rgba(91,33,182,0.18);
   }
+  .mp-row { padding: 7px 14px; gap: 12px; }
+  .mp-cover { width: 46px; height: 46px; border-radius: 6px; }
+  .mp-title { font-size: 0.88rem; }
+  .mp-artist-time { font-size: 0.7rem; }
+  .mp-controls { gap: 6px; padding-right: 8px; }
+  .mp-ctrl-btn { width: 32px; height: 32px; }
+  .mp-play-btn { width: 36px; height: 36px; }
+}
+
+@media (min-width: 1280px) {
+  .mini-player { left: 280px; right: 348px; bottom: 28px; }
+}
+
+@media (min-width: 768px) and (max-width: 980px) {
+  .mini-player { left: 244px; right: 20px; }
 }
 
 /* ── Progress track (top thin bar) ── */

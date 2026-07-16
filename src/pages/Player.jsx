@@ -1,16 +1,11 @@
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { songs as fallbackSongs } from '../data/mockData'
+import { songCoverFor, withSongArtwork } from '../data/mediaAssets'
 import { library as libraryApi } from '../api'
 import { useT } from '../i18n/LanguageContext'
 import { ArrowDown, MoreHorizontal, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Download } from '../components/Icon'
 import './Player.css'
-
-function fixCover(url) {
-  if (!url) return null
-  if (/\/cover_[a-f0-9]{8}\.png$/i.test(url)) return null
-  return url
-}
 
 function Player() {
   const { id } = useParams()
@@ -45,14 +40,14 @@ function Player() {
             color: res.song.color || '#1EABBE',
             genre: res.song.genre,
             dance: res.song.dance,
-            coverUrl: fixCover(res.song.coverUrl),
+            coverUrl: songCoverFor(res.song),
             type: res.song.type,
             fileUrl: res.song.fileUrl,
           })
         }
       } catch {
         if (!cancelled) {
-          const fallback = fallbackSongs.find(s => s.id === id) || fallbackSongs[0]
+          const fallback = withSongArtwork(fallbackSongs.find(s => s.id === id) || fallbackSongs[0])
           setSong(fallback)
         }
       }
@@ -91,16 +86,7 @@ function Player() {
       </div>
 
       <div className="plr-visual">
-        {song.coverUrl ? (
-          <img src={song.coverUrl} alt={song.title} className="plr-cover-art"
-            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-        ) : null}
-        <div className="plr-cover-fallback" style={{
-          background: `linear-gradient(135deg, ${song.color || '#1EABBE'}, ${(song.color || '#1EABBE')}66)`,
-          display: song.coverUrl ? 'none' : 'flex',
-        }}>
-          <span className="plr-note">♪</span>
-        </div>
+        <img src={song.coverUrl || songCoverFor(song)} alt={song.title} className="plr-cover-art" />
         {song.type === 'offline' && (
           <span className="plr-local-badge"><Download size={12} /> LOCAL</span>
         )}

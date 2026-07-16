@@ -9,7 +9,7 @@ const BTN_SIZE = 54; const MARGIN = 12; const TAB_H = 64
 const LOCAL_SONGS = ['Funky Lagos','Nadeya','Take Some Time','Dance In The Rain','Bootlickers House Remix','Gas and Gravity','Around the Corner','World Fusion Music','For You I\'ll Go There']
 
 function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [active, setActive] = useState(false)
   const [showRecommend, setShowRecommend] = useState(false)
 
@@ -35,6 +35,7 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
   // Voice recognition — close after command
   const startRef = useRef(null)
   const { startListening } = useVoiceRecognition({
+    lang: lang === 'zh' ? 'zh-CN' : 'en-US',
     onResult: useCallback((raw) => {
       setLastCommand(raw)
       onCommand?.(raw)
@@ -93,7 +94,7 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
   const onTouchStart = useCallback((e) => { startDrag(e.touches[0].clientX, e.touches[0].clientY) }, [startDrag])
 
   const toggleActive = useCallback(() => { setActive(a => { if (!a) setPanelStyle(calcPanelStyle()); return !a }) }, [])
-  const defaultStyle = { position: 'fixed', right: MARGIN, top: '50%', transform: 'translateY(-50%)', zIndex: 110 }
+  const defaultStyle = {}
   const dragStyle = pos ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', bottom: 'auto', zIndex: 110, transition: 'left 0.6s cubic-bezier(0.25, 0.8, 0.25, 1.2), top 0.4s ease' } : {}
   const style = pos ? dragStyle : defaultStyle
 

@@ -3,7 +3,7 @@
 
 import {
   // Navigation
-  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X,
+  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X, Trash2,
   // Media
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, Volume2,
   // Social
@@ -54,7 +54,7 @@ export const Icon = {
 
 /* Re-export individual icons for direct import */
 export {
-  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X,
+  Home, Radio, Disc3, User, Search, Bell, BellRing, Check, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, ArrowDown, MoreHorizontal, MapPin, X, Trash2,
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart,
   MessageCircle, Share2, Gift, ThumbsUp, Plus, Send,
   Camera, Upload, Sparkles, Scissors, Palette, Type, Gauge,
