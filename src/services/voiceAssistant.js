@@ -22,7 +22,7 @@ const fuse = new Fuse(songs, {
 
 /* ── Intent Parser ── */
 const COMMANDS = [
-  [/^(播放|play|放|来一首|来首|放一首)\s*(.+)$/i, 'play', (m) => ({ query: m[2].trim() })],
+  [/^(?:播放|play|put\s+on|放|来一首|来首|放一首)\s+(.+)$/i, 'play', (m) => ({ query: m[1].trim() })],
   [/^(暂停|pause|停|停止)$/i, 'pause', () => ({})],
   [/^(继续|resume|继续播放|接着放)$/i, 'resume', () => ({})],
   [/^(下一首|next|换一首|换歌|切歌)$/i, 'next', () => ({})],
@@ -95,6 +95,13 @@ function cleanQuery(q) {
 
 export function parseIntent(raw) {
   const input = raw.toLowerCase().trim()
+
+  // A greeting followed by any recognized phrase acts as wake-and-shuffle.
+  // Examples: "Hi, Efra", "Hey there", "Hello, I'm from...".
+  const greetingWithContext = input.match(/^(?:hi|hey|hello)\b[\s,.:;!?-]*(\S[\s\S]*)$/i)
+  if (greetingWithContext?.[1]) {
+    return { action: 'random', params: {}, raw }
+  }
 
   // 1. Check garbled wake words first (ASR misheard "hey afrogo")
   for (const p of GARBLED_WAKE) {

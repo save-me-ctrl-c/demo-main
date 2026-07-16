@@ -4,7 +4,6 @@ import TabBar from './components/TabBar'
 import MusicPlayer from './components/MusicPlayer'
 import VoiceButton from './components/VoiceButton'
 import { ArrowLeft, Music, Pause, Play } from './components/Icon'
-import useWakeWord from './hooks/useWakeWord'
 import { parseIntent, findSongs } from './services/voiceAssistant'
 import { useT } from './i18n/LanguageContext'
 import { songs as sourceSongs } from './data/mockData'
@@ -188,24 +187,6 @@ function AppLayout() {
   // i18n
   const { t, lang } = useT()
 
-  // Track voice assistant active state (used by useWakeWord below)
-  const [voiceActive, setVoiceActive] = useState(false)
-
-  // Wake word detection
-  const [wakeTrigger, setWakeTrigger] = useState(0)
-  const [wakeRecommend, setWakeRecommend] = useState(null)
-  useWakeWord({
-    onWake: useCallback(() => {
-      const shuffled = [...songs].sort(() => Math.random() - 0.5)
-      const randomSong = shuffled[0]
-      setWakeRecommend(randomSong.title)
-      setWakeTrigger(c => c + 1)
-      handlePlaySong(randomSong, shuffled)
-    }, [handlePlaySong]),
-    enabled: location.pathname === '/app',
-    lang: lang === 'zh' ? 'zh-CN' : 'en-US',
-  })
-
   // Voice command handler
   const handleVoiceCommand = useCallback((raw) => {
     if (!raw || raw.length < 2) return
@@ -349,7 +330,7 @@ function AppLayout() {
           playMode={playMode} onCycleMode={handleCycleMode}
         />
       )}
-      {showOverlay && <VoiceButton wakeTrigger={wakeTrigger} wakeRecommend={wakeRecommend} onCommand={handleVoiceCommand} onActiveChange={setVoiceActive} />}
+      {showOverlay && <VoiceButton onCommand={handleVoiceCommand} />}
     </div>
   )
 }

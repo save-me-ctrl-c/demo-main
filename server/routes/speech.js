@@ -11,11 +11,18 @@ function getApiKey() {
   return key && key !== 'YOUR_API_KEY' ? key : null;
 }
 
-function safeFilename(value, mimeType) {
-  const fallback = mimeType.includes('mp4') ? 'voice-command.m4a' : 'voice-command.webm';
+function safeWavFilename(value) {
+  const fallback = 'voice-command.wav';
   if (!value || typeof value !== 'string') return fallback;
   const filename = value.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
-  return filename || fallback;
+  if (!filename) return fallback;
+  return `${filename.replace(/\.[^.]*$/, '') || 'voice-command'}.wav`;
+}
+
+function isWavBuffer(buffer) {
+  return buffer.length >= 44
+    && buffer.toString('ascii', 0, 4) === 'RIFF'
+    && buffer.toString('ascii', 8, 12) === 'WAVE';
 }
 
 router.post(
@@ -31,9 +38,12 @@ router.post(
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
       return res.status(400).json({ error: 'Audio file is required' });
     }
+    if (!isWavBuffer(req.body)) {
+      return res.status(415).json({ error: 'Audio must be a valid WAV file' });
+    }
 
-    const mimeType = req.get('content-type') || 'audio/webm';
-    const filename = safeFilename(req.get('x-audio-filename'), mimeType);
+    const mimeType = 'audio/wav';
+    const filename = safeWavFilename(req.get('x-audio-filename'));
 
     try {
       const form = new FormData();
@@ -58,6 +68,7 @@ router.post(
         || payload.result?.text
         || payload.choices?.[0]?.message?.content
         || '';
+      console.log('[GLM ASR] Transcription result:', text);
       return res.json({ text, model: BIGMODEL_ASR_MODEL });
     } catch (error) {
       console.error('[GLM ASR] Request failed:', error);

@@ -5,6 +5,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 const MAX_RECORDING_MS = 6000
+const WAV_SAMPLE_RATE = 16000
 const AUDIO_TYPES = [
   'audio/webm;codecs=opus',
   'audio/webm',
@@ -13,6 +14,81 @@ const AUDIO_TYPES = [
 
 function getSupportedAudioType() {
   return AUDIO_TYPES.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || ''
+}
+
+function resampleToMono(audioBuffer, targetSampleRate) {
+  const sourceLength = audioBuffer.length
+  const channelCount = audioBuffer.numberOfChannels
+  const mono = new Float32Array(sourceLength)
+
+  for (let channel = 0; channel < channelCount; channel += 1) {
+    const channelData = audioBuffer.getChannelData(channel)
+    for (let i = 0; i < sourceLength; i += 1) {
+      mono[i] += channelData[i] / channelCount
+    }
+  }
+
+  if (audioBuffer.sampleRate === targetSampleRate) return mono
+
+  const targetLength = Math.max(1, Math.round(sourceLength * targetSampleRate / audioBuffer.sampleRate))
+  const result = new Float32Array(targetLength)
+  const ratio = audioBuffer.sampleRate / targetSampleRate
+  for (let i = 0; i < targetLength; i += 1) {
+    const position = i * ratio
+    const left = Math.floor(position)
+    const right = Math.min(left + 1, sourceLength - 1)
+    const weight = position - left
+    result[i] = mono[left] * (1 - weight) + mono[right] * weight
+  }
+  return result
+}
+
+function encodePcm16Wav(samples, sampleRate) {
+  const bytesPerSample = 2
+  const dataLength = samples.length * bytesPerSample
+  const buffer = new ArrayBuffer(44 + dataLength)
+  const view = new DataView(buffer)
+
+  const writeText = (offset, value) => {
+    for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i))
+  }
+
+  writeText(0, 'RIFF')
+  view.setUint32(4, 36 + dataLength, true)
+  writeText(8, 'WAVE')
+  writeText(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * bytesPerSample, true)
+  view.setUint16(32, bytesPerSample, true)
+  view.setUint16(34, 16, true)
+  writeText(36, 'data')
+  view.setUint32(40, dataLength, true)
+
+  let offset = 44
+  for (const sample of samples) {
+    const clamped = Math.max(-1, Math.min(1, sample))
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
+    offset += bytesPerSample
+  }
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
+async function convertToWav(audioBlob) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext
+  if (!AudioContextClass) throw new Error('WAV conversion is not supported in this browser')
+
+  const audioContext = new AudioContextClass()
+  try {
+    const encodedAudio = await audioBlob.arrayBuffer()
+    const decodedAudio = await audioContext.decodeAudioData(encodedAudio)
+    const samples = resampleToMono(decodedAudio, WAV_SAMPLE_RATE)
+    return encodePcm16Wav(samples, WAV_SAMPLE_RATE)
+  } finally {
+    await audioContext.close()
+  }
 }
 
 function useVoiceRecognition({ onResult, onError } = {}) {
@@ -43,12 +119,11 @@ function useVoiceRecognition({ onResult, onError } = {}) {
     abortRef.current = controller
 
     try {
-      const extension = audioBlob.type.includes('mp4') ? 'm4a' : 'webm'
       const response = await fetch('/api/speech/transcribe', {
         method: 'POST',
         headers: {
-          'Content-Type': audioBlob.type || 'audio/webm',
-          'X-Audio-Filename': `voice-command.${extension}`,
+          'Content-Type': 'audio/wav',
+          'X-Audio-Filename': 'voice-command.wav',
         },
         body: audioBlob,
         signal: controller.signal,
@@ -57,6 +132,10 @@ function useVoiceRecognition({ onResult, onError } = {}) {
       if (!response.ok) throw new Error(data.error || `ASR request failed (${response.status})`)
 
       const transcript = String(data.text || '').trim()
+      console.log('[VoiceRec] GLM ASR result:', {
+        model: data.model || 'glm-asr-2512',
+        text: transcript,
+      })
       if (disposedRef.current) return
       setText(transcript)
       setStatus('idle')
@@ -118,12 +197,22 @@ function useVoiceRecognition({ onResult, onError } = {}) {
         setStatus('error')
         onError?.(message)
       }
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         clearStopTimer()
         releaseStream()
         recorderRef.current = null
-        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
-        transcribe(blob)
+        setStatus('processing')
+        try {
+          const recordedBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
+          const wavBlob = await convertToWav(recordedBlob)
+          await transcribe(wavBlob)
+        } catch (error) {
+          if (disposedRef.current) return
+          const message = error.message || 'Unable to convert recording to WAV'
+          console.warn('[VoiceRec] WAV conversion error:', message)
+          setStatus('error')
+          onError?.(message)
+        }
       }
 
       recorder.start(250)

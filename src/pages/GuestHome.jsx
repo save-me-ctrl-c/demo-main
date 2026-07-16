@@ -209,6 +209,9 @@ function GuestHome() {
     if (intent.action === 'play') {
       const results = findSongs(intent.params.query)
       if (results.length > 0) { playSong(results[0], results); speak(results[0].title, lang === 'zh' ? 'zh-CN' : 'en-US') }
+    } else if (intent.action === 'random') {
+      const results = findSongs('')
+      if (results.length > 0) playSong(results[0], results)
     } else if (intent.action === 'pause' && isPlaying) togglePlay()
     else if (intent.action === 'next') playNext()
     else if (intent.action === 'prev') playPrev()
