@@ -306,7 +306,7 @@ function Create() {
 
       {/* Record Panel */}
       {activeDetail?.type === 'record' && (
-        <Portal><div className="full-panel">
+        <Portal><div className="full-panel record-full-panel">
           <div className="panel-record">
             <div className="panel-rec-header">
               <button className="panel-back" onClick={() => { setRecordState('idle'); setActiveDetail(null); }}><X size={22} /></button>

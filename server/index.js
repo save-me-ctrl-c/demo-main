@@ -165,6 +165,7 @@ app.use('/api/videos', require('./routes/videos'));
 app.use('/api', require('./routes/library'));
 app.use('/api', require('./routes/create'));
 app.use('/api', require('./routes/mentors'));
+app.use('/api', require('./routes/speech'));
 app.use('/api/profile', require('./routes/profile'));
 
 // Health check

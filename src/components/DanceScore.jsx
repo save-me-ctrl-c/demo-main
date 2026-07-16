@@ -19,6 +19,37 @@ import './DanceScore.css'
 
 const COUNTDOWN_SECONDS = 3
 
+function drawHead(ctx, landmarks, project, color) {
+  const facePoints = [0, 2, 5, 7, 8]
+    .map(index => landmarks[index])
+    .filter(point => point && (point.visibility ?? 1) >= 0.35)
+    .map(project)
+  if (facePoints.length < 2) return
+
+  const leftShoulder = landmarks[11] && project(landmarks[11])
+  const rightShoulder = landmarks[12] && project(landmarks[12])
+  const minX = Math.min(...facePoints.map(point => point.x))
+  const maxX = Math.max(...facePoints.map(point => point.x))
+  const shoulderWidth = leftShoulder && rightShoulder
+    ? Math.hypot(leftShoulder.x - rightShoulder.x, leftShoulder.y - rightShoulder.y)
+    : 0
+  const radius = Math.max(11, (maxX - minX) * 0.72, shoulderWidth * 0.17)
+  const centerX = facePoints.reduce((sum, point) => sum + point.x, 0) / facePoints.length
+  const centerY = facePoints.reduce((sum, point) => sum + point.y, 0) / facePoints.length - radius * 0.12
+
+  ctx.save()
+  ctx.lineWidth = 3
+  ctx.strokeStyle = color
+  ctx.fillStyle = 'rgba(10, 14, 20, 0.5)'
+  ctx.shadowColor = color
+  ctx.shadowBlur = 10
+  ctx.beginPath()
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.stroke()
+  ctx.restore()
+}
+
 export default function DanceScore({ onClose, currentSong, isPlaying }) {
   const { t } = useT()
 
@@ -29,6 +60,7 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   // ── MediaPipe + Camera refs ──
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
+  const referenceCanvasRef = useRef(null)
   const streamRef = useRef(null)
   const trackerRef = useRef(null)
   const animFrameRef = useRef(null)
@@ -40,9 +72,10 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   const [energyLevel, setEnergyLevel] = useState(0)
   const [feedback, setFeedback] = useState('')
   const [elapsedMs, setElapsedMs] = useState(0)
+  const [celebrations, setCelebrations] = useState([])
   const scoreStartRef = useRef(0)
-  const prevLandmarksRef = useRef(null)
-  const userFramesRef = useRef([]) // rolling window for rhythm calc
+  const peopleScoringRef = useRef(new Map())
+  const celebrationTimersRef = useRef(new Set())
 
   // ── Reference track ──
   const [refTrack, setRefTrack] = useState(null)
@@ -95,6 +128,8 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
       if (streamRef.current) stopPoseCamera(streamRef.current)
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
       if (recIntervalRef.current) clearInterval(recIntervalRef.current)
+      celebrationTimersRef.current.forEach(timer => clearTimeout(timer))
+      celebrationTimersRef.current.clear()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -206,72 +241,174 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
   }, [loadRefTracks, selectRefTrack])
 
   // ── Skeleton drawing on canvas ──
-  const drawSkeleton = useCallback((landmarks) => {
+  const drawSkeleton = useCallback((people) => {
     const canvas = canvasRef.current
     const video = videoRef.current
-    if (!canvas || !video || !landmarks || landmarks.length < 33) return
+    if (!canvas || !video) return
 
     const ctx = canvas.getContext('2d')
-    const w = video.videoWidth || 640
-    const h = video.videoHeight || 480
+    const sourceW = video.videoWidth || 640
+    const sourceH = video.videoHeight || 480
+    const w = canvas.clientWidth || canvas.parentElement?.clientWidth || sourceW
+    const h = canvas.clientHeight || canvas.parentElement?.clientHeight || sourceH
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
 
-    // Match canvas size to video
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w
-      canvas.height = h
+    if (canvas.width !== Math.round(w * pixelRatio) || canvas.height !== Math.round(h * pixelRatio)) {
+      canvas.width = Math.round(w * pixelRatio)
+      canvas.height = Math.round(h * pixelRatio)
     }
 
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
-    // Determine skeleton color based on combo level
-    let color = '#00E676'
-    let glow = 'rgba(0, 230, 118, 0.6)'
-    if (comboState.level === 'fire') {
-      color = '#FF5C8A'; glow = 'rgba(255, 92, 138, 0.8)'
-    } else if (comboState.level === 'super') {
-      color = '#FF8C3D'; glow = 'rgba(255, 140, 61, 0.7)'
-    } else if (comboState.level === 'great') {
-      color = '#FFB703'; glow = 'rgba(255, 183, 3, 0.6)'
+    // Match the video's object-fit: cover crop, then mirror the front camera.
+    const coverScale = Math.max(w / sourceW, h / sourceH)
+    const renderedW = sourceW * coverScale
+    const renderedH = sourceH * coverScale
+    const offsetX = (w - renderedW) / 2
+    const offsetY = (h - renderedH) / 2
+    const project = point => ({
+      x: w - (point.x * renderedW + offsetX),
+      y: point.y * renderedH + offsetY,
+    })
+
+    const palette = [
+      ['#00E676', 'rgba(0, 230, 118, 0.6)'],
+      ['#FFB703', 'rgba(255, 183, 3, 0.6)'],
+      ['#42A5F5', 'rgba(66, 165, 245, 0.6)'],
+      ['#FF5C8A', 'rgba(255, 92, 138, 0.6)'],
+    ]
+
+    for (const person of people || []) {
+      const landmarks = person.landmarks
+      if (!landmarks || landmarks.length < 33) continue
+      const [color, glow] = palette[(person.id - 1) % palette.length]
+      ctx.globalAlpha = person.stale ? 0.35 : 1
+      ctx.strokeStyle = color
+      ctx.lineWidth = 3
+      ctx.shadowColor = glow
+      ctx.shadowBlur = 8
+      ctx.lineCap = 'round'
+
+      for (const [from, to] of SKELETON_CONNECTIONS) {
+        const a = landmarks[from]
+        const b = landmarks[to]
+        if (!a || !b) continue
+        if ((a.visibility != null && a.visibility < 0.4) || (b.visibility != null && b.visibility < 0.4)) continue
+        const projectedA = project(a)
+        const projectedB = project(b)
+        ctx.beginPath()
+        ctx.moveTo(projectedA.x, projectedA.y)
+        ctx.lineTo(projectedB.x, projectedB.y)
+        ctx.stroke()
+      }
+
+      ctx.shadowBlur = 6
+      for (const idx of SKELETON_JOINTS) {
+        const point = landmarks[idx]
+        if (!point || (point.visibility != null && point.visibility < 0.4)) continue
+        const projected = project(point)
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.arc(projected.x, projected.y, 4, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      drawHead(ctx, landmarks, project, color)
     }
 
-    // Draw bone connections
-    ctx.strokeStyle = color
-    ctx.lineWidth = 3
-    ctx.shadowColor = glow
-    ctx.shadowBlur = 8
-    ctx.lineCap = 'round'
+    ctx.globalAlpha = 1
+    ctx.shadowBlur = 0
+  }, [])
 
+  const drawReferenceSkeleton = useCallback((landmarks) => {
+    const canvas = referenceCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const w = canvas.clientWidth || canvas.parentElement?.clientWidth || 320
+    const h = canvas.clientHeight || canvas.parentElement?.clientHeight || 480
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+    if (canvas.width !== Math.round(w * pixelRatio) || canvas.height !== Math.round(h * pixelRatio)) {
+      canvas.width = Math.round(w * pixelRatio)
+      canvas.height = Math.round(h * pixelRatio)
+    }
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    if (!landmarks || landmarks.length < 33) return
+
+    const sourceW = 4
+    const sourceH = 3
+    const containScale = Math.min(w / sourceW, h / sourceH)
+    const renderedW = sourceW * containScale
+    const renderedH = sourceH * containScale
+    const offsetX = (w - renderedW) / 2
+    const offsetY = (h - renderedH) / 2
+    const project = point => ({
+      x: w - (point.x * renderedW + offsetX),
+      y: point.y * renderedH + offsetY,
+    })
+
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 4
+    ctx.strokeStyle = '#37E6C4'
+    ctx.shadowColor = 'rgba(55, 230, 196, 0.55)'
+    ctx.shadowBlur = 10
     for (const [from, to] of SKELETON_CONNECTIONS) {
       const a = landmarks[from]
       const b = landmarks[to]
-      if (!a || !b) continue
-      if ((a.visibility != null && a.visibility < 0.4) || (b.visibility != null && b.visibility < 0.4)) continue
-
+      if (!a || !b || (a.visibility ?? 1) < 0.35 || (b.visibility ?? 1) < 0.35) continue
+      const projectedA = project(a)
+      const projectedB = project(b)
       ctx.beginPath()
-      ctx.moveTo(a.x * w, a.y * h)
-      ctx.lineTo(b.x * w, b.y * h)
+      ctx.moveTo(projectedA.x, projectedA.y)
+      ctx.lineTo(projectedB.x, projectedB.y)
       ctx.stroke()
     }
 
-    // Draw joints
-    ctx.shadowBlur = 6
-    for (const idx of SKELETON_JOINTS) {
-      const p = landmarks[idx]
-      if (!p || (p.visibility != null && p.visibility < 0.4)) continue
-      ctx.fillStyle = color
+    ctx.shadowBlur = 7
+    for (const index of SKELETON_JOINTS) {
+      const point = landmarks[index]
+      if (!point || (point.visibility ?? 1) < 0.35) continue
+      const projected = project(point)
+      ctx.fillStyle = '#F7FFFD'
       ctx.beginPath()
-      ctx.arc(p.x * w, p.y * h, 4, 0, Math.PI * 2)
+      ctx.arc(projected.x, projected.y, 4.5, 0, Math.PI * 2)
       ctx.fill()
     }
-
+    drawHead(ctx, landmarks, project, '#37E6C4')
     ctx.shadowBlur = 0
-  }, [comboState.level])
+  }, [])
+
+  useEffect(() => {
+    drawReferenceSkeleton(refTrack?.frames?.[0]?.landmarks || null)
+  }, [refTrack, drawReferenceSkeleton])
+
+  const triggerCelebration = useCallback((frameScore) => {
+    const tier = frameScore >= 0.94 ? 'perfect' : frameScore >= 0.86 ? 'great' : 'good'
+    const id = `${tier}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const celebration = {
+      id,
+      tier,
+      label: tier.toUpperCase(),
+      score: Math.round(frameScore * 100),
+      bursts: Array.from({ length: 6 }, (_, index) => ({
+        x: 8 + (index % 3) * 42 + Math.random() * 12,
+        y: 16 + Math.floor(index / 3) * 52 + Math.random() * 14,
+      })),
+    }
+    setCelebrations(current => [...current.slice(-1), celebration])
+    const timer = setTimeout(() => {
+      setCelebrations(current => current.filter(item => item.id !== id))
+      celebrationTimersRef.current.delete(timer)
+    }, 1700)
+    celebrationTimersRef.current.add(timer)
+  }, [])
 
   // ── Scoring loop ──
-  const scoringLoop = useCallback((landmarks, timestamp) => {
+  const scoringLoop = useCallback((people, timestamp) => {
     if (!refTrack || !refTrack.frames || refTrack.frames.length === 0) return
 
-    const now = Date.now()
+    const now = timestamp || Date.now()
     if (!scoreStartRef.current) scoreStartRef.current = now
     const elapsed = now - scoreStartRef.current
     setElapsedMs(elapsed)
@@ -279,62 +416,90 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     // Find reference frame
     const refFrame = findClosestRefFrame(refTrack.frames, elapsed)
     if (!refFrame) return
+    drawReferenceSkeleton(refFrame.landmarks)
 
-    // Normalize and score
-    const normalizedUser = normalizeLandmarks(landmarks, refShoulderW)
-    const frameScore = calculatePoseScore(normalizedUser, refFrame.landmarks)
-
-    // Accumulate user frames for rhythm (keep last 90 frames = ~3 sec @30fps)
-    userFramesRef.current.push({ landmarks, timestamp_ms: elapsed })
-    if (userFramesRef.current.length > 90) userFramesRef.current.shift()
-
-    // Compute rhythm score on a window
-    const rhythmWindow = userFramesRef.current.slice(-30)
     const refWindow = refTrack.frames.filter(
       f => f.timestamp_ms >= Math.max(0, elapsed - 1000) && f.timestamp_ms <= elapsed
     )
-    const rhythmScore = computeRhythmScore(rhythmWindow, refWindow.length > 0 ? refWindow : refTrack.frames.slice(0, 30))
+    const detectedIds = new Set((people || []).filter(person => !person.stale).map(person => person.id))
 
-    // Compute fusion
-    const fusion = computeFusionScore(frameScore, rhythmScore)
+    for (const person of people || []) {
+      if (person.stale) continue
+      const landmarks = person.landmarks
+      if (person.reset) peopleScoringRef.current.delete(person.id)
+      let state = peopleScoringRef.current.get(person.id)
+      if (!state) {
+        state = {
+          frames: [], prevLandmarks: null, combo: createComboState(), result: null,
+          matchFrames: 0, lastCelebration: 0,
+        }
+        peopleScoringRef.current.set(person.id, state)
+      }
 
-    // Update combo
-    const newCombo = evaluateCombo(frameScore, comboState)
-    // Track max combo
-    if (newCombo.comboCounter > newCombo.maxCombo) {
-      newCombo.maxCombo = newCombo.comboCounter
+      const normalizedUser = normalizeLandmarks(landmarks, refShoulderW)
+      const frameScore = calculatePoseScore(normalizedUser, refFrame.landmarks)
+      state.matchFrames = frameScore >= 0.78 ? (state.matchFrames || 0) + 1 : 0
+      if (state.matchFrames >= 3 && now - (state.lastCelebration || 0) >= 1600) {
+        state.lastCelebration = now
+        state.matchFrames = 0
+        triggerCelebration(frameScore)
+      }
+      state.frames.push({ landmarks, timestamp_ms: elapsed })
+      if (state.frames.length > 90) state.frames.shift()
+      const rhythmScore = computeRhythmScore(
+        state.frames.slice(-30),
+        refWindow.length > 0 ? refWindow : refTrack.frames.slice(0, 30),
+      )
+      const fusion = computeFusionScore(frameScore, rhythmScore)
+      const newCombo = evaluateCombo(frameScore, state.combo)
+      newCombo.maxCombo = Math.max(newCombo.maxCombo, newCombo.comboCounter)
+      const energy = computeEnergyLevel(landmarks, state.prevLandmarks)
+      state.prevLandmarks = landmarks
+      state.combo = newCombo
+      state.result = {
+        id: person.id,
+        overall: fusion.overall,
+        poseScore: fusion.poseScore,
+        rhythmScore: fusion.rhythmScore,
+        grade: fusion.grade,
+        gradeLabel: fusion.gradeLabel,
+        maxCombo: newCombo.maxCombo,
+        comboLevel: newCombo.level,
+        energy,
+        durationMs: elapsed,
+      }
     }
-    setComboState(newCombo)
-    setScore(fusion.overall)
 
-    // Energy level
-    const energy = computeEnergyLevel(landmarks, prevLandmarksRef.current)
-    setEnergyLevel(energy)
-    prevLandmarksRef.current = landmarks
+    const activeResults = [...peopleScoringRef.current.values()]
+      .filter(state => detectedIds.has(state.result?.id))
+      .map(state => state.result)
+      .sort((a, b) => a.id - b.id)
+    if (!activeResults.length) return
 
-    // Feedback text
-    if (newCombo.breakFrame) {
-      setFeedback(t('score_combo_break'))
-    } else if (newCombo.consecutiveGood === 5) {
-      setFeedback(t('score_combo_great'))
-    } else if (newCombo.consecutiveGood === 15) {
-      setFeedback(t('score_combo_super'))
-    } else if (newCombo.consecutiveGood === 30) {
-      setFeedback(t('score_combo_fire'))
-    }
-
-    // Store results in case we stop
+    const participantResults = [...peopleScoringRef.current.values()]
+      .map(state => state.result)
+      .filter(Boolean)
+      .sort((a, b) => a.id - b.id)
+    const average = key => participantResults.reduce((sum, result) => sum + result[key], 0) / participantResults.length
+    const overall = Math.round(average('overall'))
+    const teamFusion = computeFusionScore(average('poseScore') / 100, average('rhythmScore') / 100)
+    const leader = participantResults.reduce((best, result) => result.overall > best.overall ? result : best)
+    const leaderCombo = peopleScoringRef.current.get(leader.id).combo
+    setScore(overall)
+    setComboState(leaderCombo)
+    setEnergyLevel(average('energy'))
+    if (leaderCombo.breakFrame) setFeedback(t('score_combo_break'))
+    else if (leaderCombo.consecutiveGood === 5) setFeedback(t('score_combo_great'))
+    else if (leaderCombo.consecutiveGood === 15) setFeedback(t('score_combo_super'))
+    else if (leaderCombo.consecutiveGood === 30) setFeedback(t('score_combo_fire'))
     setResults({
-      overall: fusion.overall,
-      poseScore: fusion.poseScore,
-      rhythmScore: fusion.rhythmScore,
-      grade: fusion.grade,
-      gradeLabel: fusion.gradeLabel,
-      maxCombo: newCombo.maxCombo,
-      comboLevel: newCombo.level,
+      ...teamFusion,
+      overall,
+      maxCombo: Math.max(...participantResults.map(result => result.maxCombo)),
       durationMs: elapsed,
+      participants: participantResults,
     })
-  }, [refTrack, refShoulderW, comboState, t])
+  }, [refTrack, refShoulderW, t, drawReferenceSkeleton, triggerCelebration])
 
   // ── Start scoring ──
   const handleStartScoring = useCallback(() => {
@@ -349,9 +514,9 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     setEnergyLevel(0)
     setFeedback('')
     setElapsedMs(0)
+    setCelebrations([])
     scoreStartRef.current = 0
-    userFramesRef.current = []
-    prevLandmarksRef.current = null
+    peopleScoringRef.current = new Map()
     setResults(null)
 
     // Start countdown
@@ -375,10 +540,10 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
         // Swap tracker callback to scoring loop
         if (trackerRef.current) trackerRef.current.stop()
         if (videoRef.current) {
-          const tracker = createPoseTracker(videoRef.current, (landmarks) => {
-            cacheLandmarks(landmarks)
-            drawSkeleton(landmarks)
-            scoringLoop(landmarks)
+          const tracker = createPoseTracker(videoRef.current, (people, timestamp) => {
+            cacheLandmarks(people[0]?.landmarks || null)
+            drawSkeleton(people)
+            scoringLoop(people, timestamp)
           })
           trackerRef.current = tracker
           tracker.start()
@@ -394,9 +559,9 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
 
     // Swap back to idle tracker
     if (videoRef.current) {
-      const tracker = createPoseTracker(videoRef.current, (landmarks) => {
-        cacheLandmarks(landmarks)
-        drawSkeleton(landmarks)
+      const tracker = createPoseTracker(videoRef.current, (people) => {
+        cacheLandmarks(people[0]?.landmarks || null)
+        drawSkeleton(people)
       })
       trackerRef.current = tracker
       tracker.start()
@@ -449,9 +614,9 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
     // Start idle pose tracker
     if (videoRef.current) {
       if (trackerRef.current) trackerRef.current.stop()
-      const tracker = createPoseTracker(videoRef.current, (landmarks) => {
-        cacheLandmarks(landmarks)
-        drawSkeleton(landmarks)
+      const tracker = createPoseTracker(videoRef.current, (people) => {
+        cacheLandmarks(people[0]?.landmarks || null)
+        drawSkeleton(people)
       })
       trackerRef.current = tracker
       tracker.start()
@@ -695,8 +860,15 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
 
         {/* Camera + Canvas area */}
         <div className="ds-camera-wrap">
-          <video ref={videoRef} className="ds-cam-feed" autoPlay muted playsInline />
-          <canvas ref={canvasRef} className="ds-skeleton-canvas" />
+          <div className="ds-reference-pane">
+            <canvas ref={referenceCanvasRef} className="ds-reference-canvas" />
+            <span className="ds-pane-label">{t('score_reference_pose')}</span>
+          </div>
+          <div className="ds-user-pane">
+            <video ref={videoRef} className="ds-cam-feed" autoPlay muted playsInline />
+            <canvas ref={canvasRef} className="ds-skeleton-canvas" />
+            <span className="ds-pane-label">{t('score_player_pose')}</span>
+          </div>
           <audio ref={audioRef} src="/pose-extractor/amapiano.mp3" preload="auto" />
 
           {/* Loading */}
@@ -736,6 +908,37 @@ export default function DanceScore({ onClose, currentSong, isPlaying }) {
               {feedback && (
                 <div className="ds-feedback" key={feedback}>{feedback}</div>
               )}
+              <div className="ds-celebrations" aria-hidden="true">
+                {celebrations.map(celebration => (
+                  <div className={`ds-celebration tier-${celebration.tier}`} key={celebration.id}>
+                    <span className="ds-celebration-flash" />
+                    <div className="ds-celebration-word">
+                      <strong>{celebration.label}</strong>
+                      <small>{celebration.score}%</small>
+                    </div>
+                    {celebration.bursts.map((burst, burstIndex) => (
+                      <div
+                        className="ds-firework"
+                        key={burstIndex}
+                        style={{ left: `${burst.x}%`, top: `${burst.y}%` }}
+                      >
+                        <span className="ds-firework-flash" />
+                        {Array.from({ length: 24 }, (_, index) => (
+                          <i
+                            key={index}
+                            style={{
+                              '--angle': `${index * 15}deg`,
+                              '--distance': `${72 + (index % 6) * 13}px`,
+                              '--particle-color': ['#37E6C4', '#FFD166', '#FF5C8A', '#FFFFFF'][index % 4],
+                              '--delay': `${burstIndex * 70 + (index % 3) * 18}ms`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </>
           )}
 

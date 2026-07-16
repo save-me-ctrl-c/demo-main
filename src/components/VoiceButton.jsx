@@ -34,7 +34,7 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
 
   // Voice recognition — close after command
   const startRef = useRef(null)
-  const { startListening } = useVoiceRecognition({
+  const { startListening, stopListening, status } = useVoiceRecognition({
     lang: lang === 'zh' ? 'zh-CN' : 'en-US',
     onResult: useCallback((raw) => {
       setLastCommand(raw)
@@ -42,6 +42,10 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
       // Close after any recognized command
       setTimeout(() => { setActive(false); setLastCommand('') }, 400)
     }, [onCommand]),
+    onError: useCallback(() => {
+      setLastCommand(t('voice_recognition_failed'))
+      setTimeout(() => { setActive(false); setLastCommand('') }, 1600)
+    }, [t]),
   })
 
   useEffect(() => { startRef.current = startListening }, [startListening])
@@ -51,9 +55,13 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
     if (active && !showRecommend) {
       setLastCommand('')
       const t1 = setTimeout(() => startListening(), 300)
-      return () => clearTimeout(t1)
+      return () => {
+        clearTimeout(t1)
+        stopListening()
+      }
     }
-  }, [active, showRecommend, startListening])
+    if (!active) stopListening()
+  }, [active, showRecommend, startListening, stopListening])
 
   // Drag-to-move
   const [pos, setPos] = useState(null)
@@ -115,7 +123,7 @@ function VoiceButton({ wakeTrigger = 0, onCommand, onActiveChange, wakeRecommend
             </>
           ) : (
             <>
-              <p className="vp-text">{t('voice_listening')}</p>
+              <p className="vp-text">{status === 'processing' ? t('voice_processing') : t('voice_listening')}</p>
               {lastCommand && <p className="vp-result">"{lastCommand}"</p>}
               <p className="vp-hint">{t('voice_hint')}</p>
             </>

@@ -67,7 +67,7 @@ const zh = {
   tips_desc: '你的精彩表演获得了观众的喜爱与打赏',
 
   player_minimize: '收起', player_from_library: '来自曲库',
-  voice_listening: '正在聆听...', voice_hint: '试试："播放Amapiano" · "教我Azonto"',
+  voice_listening: '正在聆听...', voice_processing: '正在识别...', voice_recognition_failed: '语音识别失败', voice_hint: '试试："播放Amapiano" · "教我Azonto"',
   voice_recommend: '为您推荐',
   language: '语言', lang_switch: 'English',
 
@@ -78,6 +78,7 @@ const zh = {
   score_loading_mp: '加载AI模型...', score_ready: '准备就绪',
   score_countdown: '倒计时',
   score_pose_label: '动作分', score_rhythm_label: '节奏分',
+  score_reference_pose: '标准动作', score_player_pose: '我的动作',
   score_final_label: '综合评分',
   score_combo_great: '出色！', score_combo_super: '超赞！', score_combo_fire: '燃爆！',
   score_combo_break: '失误',
@@ -159,7 +160,7 @@ const en = {
   tips_desc: 'Your amazing performances earned love & tips from the audience',
 
   player_minimize: 'Minimize', player_from_library: 'Playing from Library',
-  voice_listening: 'Listening...', voice_hint: 'Try: "Play Amapiano" · "Teach me Azonto"',
+  voice_listening: 'Listening...', voice_processing: 'Recognizing...', voice_recognition_failed: 'Voice recognition failed', voice_hint: 'Try: "Play Amapiano" · "Teach me Azonto"',
   voice_recommend: 'Recommended for you',
   language: 'Language', lang_switch: '中文',
 
@@ -170,6 +171,7 @@ const en = {
   score_loading_mp: 'Loading AI model...', score_ready: 'Ready',
   score_countdown: 'Countdown',
   score_pose_label: 'Pose', score_rhythm_label: 'Rhythm',
+  score_reference_pose: 'Reference', score_player_pose: 'Player',
   score_final_label: 'Final Score',
   score_combo_great: 'Great!', score_combo_super: 'Super!', score_combo_fire: 'Fire!',
   score_combo_break: 'Break',
